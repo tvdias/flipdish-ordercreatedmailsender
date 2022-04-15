@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Flipdish.Recruiting.WebhookReceiver.Helpers
 {
-    static class CurrencyCodeMapper
+    internal static class CurrencyCodeMapper
     {
         private static readonly Dictionary<string, string> SymbolsByCode;
 
@@ -18,9 +18,7 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
 
                 return newDictionary;
             }
-
         }
-
 
         public static string IsoCodeToSymbol(string isoCode)
         {

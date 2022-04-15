@@ -1,15 +1,15 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Flipdish.Recruiting.WebhookReceiver.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using Flipdish.Recruiting.WebhookReceiver.Models;
-using System.Collections.Generic;
 
 namespace Flipdish.Recruiting.WebhookReceiver
 {
@@ -29,9 +29,8 @@ namespace Flipdish.Recruiting.WebhookReceiver
                 OrderCreatedWebhook orderCreatedWebhook;
 
                 string test = req.Query["test"];
-                if(req.Method == "GET" && !string.IsNullOrEmpty(test))
+                if (req.Method == "GET" && !string.IsNullOrEmpty(test))
                 {
-
                     var templateFilePath = Path.Combine(context.FunctionAppDirectory, "TestWebhooks", test);
                     var testWebhookJson = new StreamReader(templateFilePath).ReadToEnd();
 
@@ -56,12 +55,12 @@ namespace Flipdish.Recruiting.WebhookReceiver
                     foreach (var storeIdString in storeIdParams)
                     {
                         int storeId = 0;
-                        try 
+                        try
                         {
                             storeId = int.Parse(storeIdString);
                         }
-                        catch(Exception) {}
-                        
+                        catch (Exception) { }
+
                         storeIds.Add(storeId);
                     }
 
@@ -72,10 +71,9 @@ namespace Flipdish.Recruiting.WebhookReceiver
                     }
                 }
 
-
                 Currency currency = Currency.EUR;
                 var currencyString = req.Query["currency"].FirstOrDefault();
-                if(!string.IsNullOrEmpty(currencyString) && Enum.TryParse(typeof(Currency), currencyString.ToUpper(), out object currencyObject))
+                if (!string.IsNullOrEmpty(currencyString) && Enum.TryParse(typeof(Currency), currencyString.ToUpper(), out object currencyObject))
                 {
                     currency = (Currency)currencyObject;
                 }
@@ -83,14 +81,14 @@ namespace Flipdish.Recruiting.WebhookReceiver
                 var barcodeMetadataKey = req.Query["metadataKey"].First() ?? "eancode";
 
                 using EmailRenderer emailRenderer = new EmailRenderer(orderCreatedEvent.Order, orderCreatedEvent.AppId, barcodeMetadataKey, context.FunctionAppDirectory, log, currency);
-                
+
                 var emailOrder = emailRenderer.RenderEmailOrder();
 
                 try
                 {
                     EmailService.Send("", req.Query["to"], $"New Order #{orderId}", emailOrder, emailRenderer._imagesWithNames);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     log.LogError($"Error occured during sending email for order #{orderId}" + ex);
                 }
@@ -99,7 +97,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
 
                 return new ContentResult { Content = emailOrder, ContentType = "text/html" };
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 log.LogError(ex, $"Error occured during processing order #{orderId}");
                 throw ex;

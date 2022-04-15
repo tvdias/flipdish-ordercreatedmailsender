@@ -1,7 +1,6 @@
-﻿
-using Flipdish.Recruiting.WebhookReceiver.Models;
-using System;
+﻿using System;
 using System.Globalization;
+using Flipdish.Recruiting.WebhookReceiver.Models;
 
 namespace Flipdish.Recruiting.WebhookReceiver.Helpers
 {
@@ -9,7 +8,6 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
     {
         public static string GetDynamicMapUrl(double centerLatitude, double centerLongitude, int zoom)
         {
-
             // latitude
             string direction;
             double absoluteValue;
@@ -43,6 +41,7 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
             string url = string.Format("https://www.google.ie/maps/place/{0}+{1}/@{2},{3},{4}z", dmsLatitude, dmsLongitude, centerLatitude, centerLongitude, zoom);
             return url;
         }
+
         private static string GetDms(double value)
         {
             double decimalDegrees = (double)value;
@@ -60,9 +59,8 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
             return result;
         }
 
-        public static string GetStaticMapUrl(double centerLatitude, double centerLongitude, int zoom, double? markerLatitude,  double? markerLongitude, int width = 1200, int height = 1200)
+        public static string GetStaticMapUrl(double centerLatitude, double centerLongitude, int zoom, double? markerLatitude, double? markerLongitude, int width = 1200, int height = 1200)
         {
-
             string googleStaticMapsApiKey = SettingsService.Google_StaticMapsApiKey;
 
             string keyString = string.IsNullOrWhiteSpace(googleStaticMapsApiKey) ? "" : "&key=" + googleStaticMapsApiKey;

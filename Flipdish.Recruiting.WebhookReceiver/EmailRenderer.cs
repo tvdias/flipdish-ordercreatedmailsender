@@ -1,14 +1,14 @@
 ﻿using System;
-using System.IO;
-using Microsoft.Extensions.Logging;
-using DotLiquid;
-using System.Text;
 using System.Collections.Generic;
-using System.Linq;
 using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
-using Flipdish.Recruiting.WebhookReceiver.Models;
+using DotLiquid;
 using Flipdish.Recruiting.WebhookReceiver.Helpers;
+using Flipdish.Recruiting.WebhookReceiver.Models;
+using Microsoft.Extensions.Logging;
 using NetBarcode;
 
 namespace Flipdish.Recruiting.WebhookReceiver
@@ -120,12 +120,15 @@ namespace Flipdish.Recruiting.WebhookReceiver
                     case Order.PickupLocationTypeEnum.TakeOut:
                         orderMsg = "NEW COLLECTION ORDER ";
                         break;
+
                     case Order.PickupLocationTypeEnum.TableService:
                         orderMsg = "NEW TABLE SERVICE ORDER ";
                         break;
+
                     case Order.PickupLocationTypeEnum.DineIn:
                         orderMsg = "NEW DINE IN ORDER ";
                         break;
+
                     default:
                         string orderMsgLower = $"NEW {_order.PickupLocationType.ToString()} ORDER";
                         orderMsg = orderMsgLower.ToUpper();
@@ -162,7 +165,6 @@ namespace Flipdish.Recruiting.WebhookReceiver
             string resTotal = "Total";
             string resCustomer_Location = "Customer Location";
             string resTax = "Tax";
-
 
             var paramaters = new RenderParameters(CultureInfo.CurrentCulture)
             {
@@ -214,7 +216,6 @@ namespace Flipdish.Recruiting.WebhookReceiver
             return template.Render(paramaters);
         }
 
-
         private string GetPreorderPartial()
         {
             string templateStr = GetLiquidFileAsString("PreorderPartial.liquid");
@@ -246,7 +247,6 @@ namespace Flipdish.Recruiting.WebhookReceiver
             return new StreamReader(templateFilePath).ReadToEnd();
         }
 
-
         private string GetOrderStatusPartial()
         {
             int orderId = _order.OrderId.Value;
@@ -270,6 +270,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
 
             return template.Render(paramaters); ;
         }
+
         private string GetOrderItemsPartial()
         {
             string templateStr = GetLiquidFileAsString("OrderItemsPartial.liquid");
@@ -347,7 +348,6 @@ namespace Flipdish.Recruiting.WebhookReceiver
 
             return template.Render(paramaters);
         }
-
 
         public Dictionary<string, Stream> _imagesWithNames = new Dictionary<string, Stream>();
 
@@ -435,7 +435,6 @@ namespace Flipdish.Recruiting.WebhookReceiver
                         }
 
                         itemsPart.AppendLine("</tr>");
-
                     }
                 }
 
@@ -497,7 +496,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
             if (_imagesWithNames == null)
                 return;
 
-            foreach(var kvp in _imagesWithNames)
+            foreach (var kvp in _imagesWithNames)
             {
                 kvp.Value.Dispose();
             }

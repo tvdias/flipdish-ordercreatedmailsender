@@ -1,10 +1,10 @@
-using Flipdish.Recruiting.WebhookReceiver.Models;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Threading;
+using Flipdish.Recruiting.WebhookReceiver.Models;
 
 namespace Flipdish.Recruiting.WebhookReceiver.Helpers
 {
@@ -42,7 +42,8 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
                     }
                 }
 
-                var menuSectionGrouped = new MenuSectionGrouped {
+                var menuSectionGrouped = new MenuSectionGrouped
+                {
                     Name = sectionName,
                     DisplayOrder = menuSectionDisplayOrder++,
                     MenuItemsGroupedList = menuItemsGroupedList
@@ -53,6 +54,7 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
 
             return result;
         }
+
         public static string ToCurrencyString(this decimal l, Currency currency, CultureInfo cultureInfo)
         {
             NumberFormatInfo numberFormatInfo = cultureInfo.NumberFormat;
@@ -62,6 +64,7 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
 
             return formattedPrice;
         }
+
         public static string ToCurrencyString(this double l, Currency currency, CultureInfo cultureInfo)
         {
             NumberFormatInfo numberFormatInfo = cultureInfo.NumberFormat;
@@ -71,16 +74,19 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
 
             return formattedPrice;
         }
+
         public static string ToCurrencyString(this decimal l, Currency currency)
         {
             var cultureInfo = new CultureInfo(Thread.CurrentThread.CurrentUICulture.IetfLanguageTag);
             return ToCurrencyString(l, currency, cultureInfo);
         }
+
         public static string ToCurrencyString(this double l, Currency currency)
         {
             var cultureInfo = new CultureInfo(Thread.CurrentThread.CurrentUICulture.IetfLanguageTag);
             return ToCurrencyString(l, currency, cultureInfo);
         }
+
         public static string ToRawHtmlCurrencyString(this decimal l, Currency currency)
         {
             string currencyString = l.ToCurrencyString(currency);
@@ -89,6 +95,7 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
 
             return result;
         }
+
         public static string ToRawHtmlCurrencyString(this double l, Currency currency)
         {
             string currencyString = l.ToCurrencyString(currency);
@@ -123,27 +130,35 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
                 case Order.TableServiceCatagoryEnum.Generic:
                     result = "Generic Service n ";
                     break;
+
                 case Order.TableServiceCatagoryEnum.Villa:
                     result = "Villa Service n ";
                     break;
+
                 case Order.TableServiceCatagoryEnum.House:
                     result = "House Service n ";
                     break;
+
                 case Order.TableServiceCatagoryEnum.Room:
                     result = "Room Service n ";
                     break;
+
                 case Order.TableServiceCatagoryEnum.Area:
                     result = "Area Service n ";
                     break;
+
                 case Order.TableServiceCatagoryEnum.Table:
                     result = "Table Service n ";
                     break;
+
                 case Order.TableServiceCatagoryEnum.ParkingBay:
                     result = ".Parking Bay Service n ";
                     break;
+
                 case Order.TableServiceCatagoryEnum.Gate:
                     result = "Gate Service n ";
                     break;
+
                 default:
                     result = ">";
                     break;
@@ -151,9 +166,10 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
 
             return result;
         }
+
         public static DateTime UtcToLocalTime(this DateTime utcTime, string timeZoneInfoId)
         {
-            // Getting strange exceptions when we have invalid times, near hour changes. 
+            // Getting strange exceptions when we have invalid times, near hour changes.
             // If any better developer than me can fix this, I'd be much obliged. CM
             // http://stackoverflow.com/questions/36422138/datetime-parsing-error-the-supplied-datetime-represents-an-invalid-time
             try

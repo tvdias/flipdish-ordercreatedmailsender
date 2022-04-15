@@ -15,7 +15,6 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
 
     public static class EtaResponseMethods
     {
-
         // 19 Feb
         // Feb 19
         public static string GetDateString(DateTime requestedTime)

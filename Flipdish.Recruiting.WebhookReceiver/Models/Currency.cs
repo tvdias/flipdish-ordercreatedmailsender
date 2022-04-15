@@ -1,20 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Flipdish.Recruiting.WebhookReceiver.Models
+﻿namespace Flipdish.Recruiting.WebhookReceiver.Models
 {
     public class CurrencyItem
     {
         public Currency Currency { get; set; }
         public string IsoCode { get; set; }
         public string Symbol { get; set; }
-
     }
+
     public enum Currency
     {
         // These must match three letter codes ISO 4127 http://en.wikipedia.org/wiki/ISO_4217
         EUR = 1,
+
         USD = 2,
         GBP = 3,
         CAD = 4,

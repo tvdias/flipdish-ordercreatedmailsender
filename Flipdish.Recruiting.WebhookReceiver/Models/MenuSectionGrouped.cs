@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,14 +11,13 @@ namespace Flipdish.Recruiting.WebhookReceiver.Models
         public List<MenuItemsGrouped> MenuItemsGroupedList { get; set; }
     }
 
-    
     public class MenuItemsGrouped
     {
         public MenuItemUI MenuItemUI { get; set; }
         public int Count { get; set; }
         public int DisplayOrder { get; set; }
     }
-    
+
     public class MenuItemUI
     {
         public string Name { get; set; }
@@ -50,7 +48,7 @@ namespace Flipdish.Recruiting.WebhookReceiver.Models
                 result.Append(Price.Value.ToString());
             }
 
-            foreach(var o in MenuOptions)
+            foreach (var o in MenuOptions)
             {
                 result.Append(o.ToString());
             }
@@ -73,7 +71,7 @@ namespace Flipdish.Recruiting.WebhookReceiver.Models
                         Price = (decimal)option.Price.Value,
                         OptionSetDisplayOrder = option.MenuItemOptionSetDisplayOrder.Value,
                         DisplayOrder = displayOrder++,
-                        Barcode = option.Metadata.ContainsKey(_barcodeMetadataKey) ? option.Metadata[_barcodeMetadataKey]  : null
+                        Barcode = option.Metadata.ContainsKey(_barcodeMetadataKey) ? option.Metadata[_barcodeMetadataKey] : null
                     };
 
                     result.Add(menuOption);
@@ -83,7 +81,7 @@ namespace Flipdish.Recruiting.WebhookReceiver.Models
             return result;
         }
     }
-    
+
     public class MenuOption
     {
         public string Name { get; set; }

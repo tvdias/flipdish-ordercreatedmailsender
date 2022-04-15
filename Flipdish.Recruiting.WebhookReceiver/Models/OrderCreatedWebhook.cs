@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Flipdish.Recruiting.WebhookReceiver.Models
 {
@@ -8,7 +6,7 @@ namespace Flipdish.Recruiting.WebhookReceiver.Models
     {
         public string Type { get; set; }
 
-        public DateTime CreateTime { get;set;}
+        public DateTime CreateTime { get; set; }
         public OrderCreatedEvent Body { get; set; }
     }
 }

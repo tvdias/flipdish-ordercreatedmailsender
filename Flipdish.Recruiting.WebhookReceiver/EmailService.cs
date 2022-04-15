@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Flipdish.Recruiting.WebhookReceiver
 {
-    class EmailService
+    internal class EmailService
     {
         public static async Task Send(string from, IEnumerable<string> to, string subject, string body, Dictionary<string, Stream> attachements, IEnumerable<string> cc = null)
         {
@@ -28,7 +28,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
                     mailMessage.To.Add(t);
                 }
             }
-            foreach(var nameAndStreamPair in attachements)
+            foreach (var nameAndStreamPair in attachements)
             {
                 var attachment = new Attachment(nameAndStreamPair.Value, nameAndStreamPair.Key);
                 attachment.ContentId = nameAndStreamPair.Key;

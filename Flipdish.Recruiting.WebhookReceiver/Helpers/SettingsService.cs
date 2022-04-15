@@ -4,12 +4,12 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
     {
         public static string EmailServiceOrderUrl
         {
-            get {return "https://portal.flipdish.com/{0}/orders/{1}"; }
+            get { return "https://portal.flipdish.com/{0}/orders/{1}"; }
         }
 
         public static string Flipdish_DomainWithScheme
         {
-            get {return "https://app.flipdish.com/";}
+            get { return "https://app.flipdish.com/"; }
         }
 
         public static string Google_StaticMapsApiKey
