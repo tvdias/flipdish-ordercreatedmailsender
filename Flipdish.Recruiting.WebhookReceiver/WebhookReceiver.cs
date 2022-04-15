@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Flipdish.Recruiting.WebhookReceiver.Models;
+using Flipdish.Recruiting.WebhookReceiver.Services;
+using Flipdish.Recruiting.WebhookReceiver.Services.Mailer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
@@ -21,6 +23,9 @@ namespace Flipdish.Recruiting.WebhookReceiver
             ILogger log,
             ExecutionContext context)
         {
+            IMailer mailer = new SmtpMailer();
+            var mailService = new EmailService(mailer);
+
             int? orderId = null;
             try
             {
@@ -86,7 +91,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
 
                 try
                 {
-                    EmailService.Send("", req.Query["to"], $"New Order #{orderId}", emailOrder, emailRenderer._imagesWithNames);
+                    await mailService.Send("", req.Query["to"], $"New Order #{orderId}", emailOrder, emailRenderer._imagesWithNames);
                 }
                 catch (Exception ex)
                 {
