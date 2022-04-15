@@ -91,18 +91,16 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
         {
             string currencyString = l.ToCurrencyString(currency);
             string result = WebUtility.HtmlEncode(currencyString);
-            result = result.Replace(" ", "&nbsp;");
 
-            return result;
+            return result.Replace(" ", "&nbsp;");
         }
 
         public static string ToRawHtmlCurrencyString(this double l, Currency currency)
         {
             string currencyString = l.ToCurrencyString(currency);
             string result = WebUtility.HtmlEncode(currencyString);
-            result = result.Replace(" ", "&nbsp;");
 
-            return result;
+            return result.Replace(" ", "&nbsp;");
         }
 
         public static string ToSymbol(this Currency c)
@@ -124,47 +122,18 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
 
         public static string GetTableServiceCategoryLabel(this Order.TableServiceCatagoryEnum tableServiceCatagory)
         {
-            string result;
-            switch (tableServiceCatagory)
+            return tableServiceCatagory switch
             {
-                case Order.TableServiceCatagoryEnum.Generic:
-                    result = "Generic Service n ";
-                    break;
-
-                case Order.TableServiceCatagoryEnum.Villa:
-                    result = "Villa Service n ";
-                    break;
-
-                case Order.TableServiceCatagoryEnum.House:
-                    result = "House Service n ";
-                    break;
-
-                case Order.TableServiceCatagoryEnum.Room:
-                    result = "Room Service n ";
-                    break;
-
-                case Order.TableServiceCatagoryEnum.Area:
-                    result = "Area Service n ";
-                    break;
-
-                case Order.TableServiceCatagoryEnum.Table:
-                    result = "Table Service n ";
-                    break;
-
-                case Order.TableServiceCatagoryEnum.ParkingBay:
-                    result = ".Parking Bay Service n ";
-                    break;
-
-                case Order.TableServiceCatagoryEnum.Gate:
-                    result = "Gate Service n ";
-                    break;
-
-                default:
-                    result = ">";
-                    break;
-            }
-
-            return result;
+                Order.TableServiceCatagoryEnum.Generic => "Generic Service n ",
+                Order.TableServiceCatagoryEnum.Villa => "Villa Service n ",
+                Order.TableServiceCatagoryEnum.House => "House Service n ",
+                Order.TableServiceCatagoryEnum.Room => "Room Service n ",
+                Order.TableServiceCatagoryEnum.Area => "Area Service n ",
+                Order.TableServiceCatagoryEnum.Table => "Table Service n ",
+                Order.TableServiceCatagoryEnum.ParkingBay => ".Parking Bay Service n ",
+                Order.TableServiceCatagoryEnum.Gate => "Gate Service n ",
+                _ => ">",
+            };
         }
 
         public static DateTime UtcToLocalTime(this DateTime utcTime, string timeZoneInfoId)

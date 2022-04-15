@@ -62,7 +62,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
             string totalRestaurantAmount = _order.Amount.Value.ToRawHtmlCurrencyString(_currency);
             string voucherAmount = _order.Voucher != null ? _order.Voucher.Amount.Value.ToRawHtmlCurrencyString(_currency) : "0";
 
-            if (_order.Store.Coordinates != null && _order.Store.Coordinates.Latitude != null && _order.Store.Coordinates.Longitude != null)
+            if (_order.Store.Coordinates?.Latitude != null && _order.Store.Coordinates.Longitude != null)
             {
                 if (_order.DeliveryType == Order.DeliveryTypeEnum.Delivery &&
                     _order.DeliveryLocation.Coordinates != null)
@@ -130,7 +130,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
                         break;
 
                     default:
-                        string orderMsgLower = $"NEW {_order.PickupLocationType.ToString()} ORDER";
+                        string orderMsgLower = $"NEW {_order.PickupLocationType} ORDER";
                         orderMsg = orderMsgLower.ToUpper();
                         break;
                 }
@@ -141,30 +141,30 @@ namespace Flipdish.Recruiting.WebhookReceiver
             }
             const string openingTag1 = "<span style=\"color: #222; background: #ffc; font-weight: bold; \">";
             const string closingTag1 = "</span>";
-            orderMsg = Regex.Replace(orderMsg, @"[ ]", "&nbsp;");
+            orderMsg = Regex.Replace(orderMsg, "[ ]", "&nbsp;");
             string resNew_DeliveryType_Order = string.Format(orderMsg, openingTag1, closingTag1);
 
-            string resPAID = "PAID";
-            string resUNPAID = "UNPAID";
+            const string resPAID = "PAID";
+            const string resUNPAID = "UNPAID";
             string resDistance = string.Format("{0} km from restaurant", airDistanceStr);
 
             const string openingTag2 = "<span style=\"font-weight: bold; font-size: inherit; line-height: 24px;color: rgb(208, 93, 104); \">";
             const string closingTag2 = "</span>";
 
-            string taxAmount = null;// (physicalRestaurant?.Menu?.DisplayTax ?? false) ? order.TotalTax.ToRawHtmlCurrencyString(order.Currency) : null;
+            const string taxAmount = null;// (physicalRestaurant?.Menu?.DisplayTax ?? false) ? order.TotalTax.ToRawHtmlCurrencyString(order.Currency) : null;
 
             string resCall_the_Flipdish_ = string.Format("Call the Flipdish Hotline at {0}", openingTag2 + supportNumber + closingTag2);
 
-            string resRestaurant_New_Order_Mail = "Restaurant New Order Mail";
-            string resVIEW_ONLINE = "VIEW ONLINE";
-            string resFood_Total = "Food Total";
-            string resVoucher = "Voucher";
-            string resProcessing_Fee = "Processing Fee";
-            string resDelivery_Fee = "Delivery Fee";
-            string resTip_Amount = "Tip Amount";
-            string resTotal = "Total";
-            string resCustomer_Location = "Customer Location";
-            string resTax = "Tax";
+            const string resRestaurant_New_Order_Mail = "Restaurant New Order Mail";
+            const string resVIEW_ONLINE = "VIEW ONLINE";
+            const string resFood_Total = "Food Total";
+            const string resVoucher = "Voucher";
+            const string resProcessing_Fee = "Processing Fee";
+            const string resDelivery_Fee = "Delivery Fee";
+            const string resTip_Amount = "Tip Amount";
+            const string resTotal = "Total";
+            const string resCustomer_Location = "Customer Location";
+            const string resTax = "Tax";
 
             var paramaters = new RenderParameters(CultureInfo.CurrentCulture)
             {
@@ -226,7 +226,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
             string reqestedForDateStr = EtaResponseMethods.GetDateString(reqForLocal);
             string reqestedForTimeStr = EtaResponseMethods.GetClocksToString(reqForLocal);
 
-            string resPREORDER_FOR = "PREORDER FOR";
+            const string resPREORDER_FOR = "PREORDER FOR";
 
             var paramaters = new RenderParameters(CultureInfo.CurrentCulture)
             {
@@ -252,8 +252,8 @@ namespace Flipdish.Recruiting.WebhookReceiver
             int orderId = _order.OrderId.Value;
             string webLink = string.Format(SettingsService.EmailServiceOrderUrl, _appNameId, orderId);
 
-            string resOrder = "Order";
-            string resView_Order = "View Order";
+            const string resOrder = "Order";
+            const string resView_Order = "View Order";
 
             string templateStr = GetLiquidFileAsString("OrderStatusPartial.liquid");
             DotLiquid.Template template = Template.Parse(templateStr);
@@ -268,7 +268,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
                 })
             };
 
-            return template.Render(paramaters); ;
+            return template.Render(paramaters);
         }
 
         private string GetOrderItemsPartial()
@@ -279,13 +279,13 @@ namespace Flipdish.Recruiting.WebhookReceiver
             string chefNote = _order.ChefNote;
             string itemsPart = GetItemsPart();
 
-            string resSection = "Section";
-            string resItems = "Items";
-            string resOptions = "Options";
-            string resPrice = "Price";
-            string resChefNotes = "Chef Notes";
+            const string resSection = "Section";
+            const string resItems = "Items";
+            const string resOptions = "Options";
+            const string resPrice = "Price";
+            const string resChefNotes = "Chef Notes";
 
-            string customerLocationLabel = "Customer Location";
+            const string customerLocationLabel = "Customer Location";
 
             string customerPickupLocation = GetCustomerPickupLocationMessage();
 
@@ -330,7 +330,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
             string phoneNumber = _order.Customer.PhoneNumberLocalFormat;
             bool isDelivery = _order.DeliveryType == Order.DeliveryTypeEnum.Delivery;
 
-            string resDelivery_Instructions = "Delivery Instructions";
+            const string resDelivery_Instructions = "Delivery Instructions";
 
             var paramaters = new RenderParameters(CultureInfo.CurrentCulture)
             {
@@ -356,8 +356,8 @@ namespace Flipdish.Recruiting.WebhookReceiver
             StringBuilder itemsPart = new StringBuilder();
 
             itemsPart.AppendLine("<tr>");
-            itemsPart.AppendLine($"<td cellpadding=\"2px\" valign=\"top\" style=\"font-weight: bold;\">Order items</td>");
-            itemsPart.AppendLine($"<td cellpadding=\"2px\" valign=\"top\"></td>");
+            itemsPart.AppendLine("<td cellpadding=\"2px\" valign=\"top\" style=\"font-weight: bold;\">Order items</td>");
+            itemsPart.AppendLine("<td cellpadding=\"2px\" valign=\"top\"></td>");
             itemsPart.AppendLine("</tr>");
             itemsPart.AppendLine(GetSpaceDivider());
             List<MenuSectionGrouped> sectionsGrouped = OrderHelper.GetMenuSectionGroupedList(_order.OrderItems, _barcodeMetadataKey);
@@ -365,8 +365,8 @@ namespace Flipdish.Recruiting.WebhookReceiver
             foreach (var section in sectionsGrouped)
             {
                 itemsPart.AppendLine("<tr>");
-                itemsPart.AppendLine($"<td cellpadding=\"2px\" valign=\"top\" style=\"font-size: 14px;\">{section.Name.ToUpper()}</td>");
-                itemsPart.AppendLine($"<td cellpadding=\"2px\" valign=\"top\" style=\"font-size: 14px;\"></td>");
+                itemsPart.Append("<td cellpadding=\"2px\" valign=\"top\" style=\"font-size: 14px;\">").Append(section.Name.ToUpper()).AppendLine("</td>");
+                itemsPart.AppendLine("<td cellpadding=\"2px\" valign=\"top\" style=\"font-size: 14px;\"></td>");
                 itemsPart.AppendLine("</tr>");
                 itemsPart.AppendLine(GetLineDivider());
                 itemsPart.AppendLine(GetSpaceDivider());
@@ -374,9 +374,9 @@ namespace Flipdish.Recruiting.WebhookReceiver
                 {
                     itemsPart.AppendLine("<tr>");
                     string countStr = item.Count > 1 ? $"{item.Count} x " : string.Empty;
-                    itemsPart.AppendLine($"<td cellpadding=\"2px\" valign=\"middle\" style=\"padding-left: 40px;\">{countStr}{item.MenuItemUI.Name}</td>");
+                    itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\" style=\"padding-left: 40px;\">").Append(countStr).Append(item.MenuItemUI.Name).AppendLine("</td>");
                     string itemPriceStr = item.MenuItemUI.Price.HasValue ? (item.MenuItemUI.Price.Value * item.Count).ToRawHtmlCurrencyString(_currency) : string.Empty;
-                    itemsPart.AppendLine($"<td cellpadding=\"2px\" valign=\"middle\">{itemPriceStr}</td>");
+                    itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\">").Append(itemPriceStr).AppendLine("</td>");
 
                     if (!string.IsNullOrEmpty(item.MenuItemUI.Barcode))
                     {
@@ -395,11 +395,11 @@ namespace Flipdish.Recruiting.WebhookReceiver
                             if (!_imagesWithNames.ContainsKey(item.MenuItemUI.Barcode + ".png"))
                                 _imagesWithNames.Add(item.MenuItemUI.Barcode + ".png", barcodeStream);
 
-                            itemsPart.AppendLine($"<td cellpadding=\"2px\" valign=\"middle\"><img style=\"margin-left: 14px;margin-left: 9px;padding-top: 10px; padding-bottom:10px\" src=\"cid:{item.MenuItemUI.Barcode}.png\"/></td>");
+                            itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\"><img style=\"margin-left: 14px;margin-left: 9px;padding-top: 10px; padding-bottom:10px\" src=\"cid:").Append(item.MenuItemUI.Barcode).AppendLine(".png\"/></td>");
                             if (item.Count > 1)
                             {
-                                itemsPart.AppendLine($"<td cellpadding=\"2px\" valign=\"middle\" style=\"font-size:40px\">x</td>");
-                                itemsPart.AppendLine($"<td cellpadding=\"2px\" valign=\"middle\" style=\"font-size:50px\">{item.Count}</td>");
+                                itemsPart.AppendLine("<td cellpadding=\"2px\" valign=\"middle\" style=\"font-size:40px\">x</td>");
+                                itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\" style=\"font-size:50px\">").Append(item.Count).AppendLine("</td>");
                             }
                         }
                     }
@@ -409,8 +409,8 @@ namespace Flipdish.Recruiting.WebhookReceiver
                     foreach (MenuOption option in item.MenuItemUI.MenuOptions)
                     {
                         itemsPart.AppendLine("<tr>");
-                        itemsPart.AppendLine($"<td cellpadding=\"2px\" valign=\"middle\" style=\"padding-left: 40px;padding-top: 10px; padding-bottom:10px\">+ {option.Name}</td>");
-                        itemsPart.AppendLine($"<td cellpadding=\"2px\" valign=\"middle\">{(option.Price * item.Count).ToRawHtmlCurrencyString(_currency)}</td>");
+                        itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\" style=\"padding-left: 40px;padding-top: 10px; padding-bottom:10px\">+ ").Append(option.Name).AppendLine("</td>");
+                        itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\">").Append((option.Price * item.Count).ToRawHtmlCurrencyString(_currency)).AppendLine("</td>");
 
                         if (!string.IsNullOrEmpty(option.Barcode))
                         {
@@ -430,7 +430,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
                                 {
                                     _imagesWithNames.Add(option.Barcode + ".png", barcodeStream);
                                 }
-                                itemsPart.AppendLine($"<td cellpadding=\"2px\" valign=\"middle\"><img style=\"margin-left: 14px;margin-left: 9px;padding-top: 10px; padding-bottom:10px\" src=\"cid:{option.Barcode}.png\"/></td>");
+                                itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\"><img style=\"margin-left: 14px;margin-left: 9px;padding-top: 10px; padding-bottom:10px\" src=\"cid:").Append(option.Barcode).AppendLine(".png\"/></td>");
                             }
                         }
 

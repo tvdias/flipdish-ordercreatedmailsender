@@ -15,15 +15,11 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
 
     public static class EtaResponseMethods
     {
-        // 19 Feb
-        // Feb 19
         public static string GetDateString(DateTime requestedTime)
         {
-            return requestedTime.ToString($"dd MMM");
+            return requestedTime.ToString("dd MMM");
         }
 
-        // 14:00
-        // 2:00 PM
         public static string GetClocksToString(DateTime requestedTime)
         {
             return requestedTime.ToString("HH:mm");

@@ -105,7 +105,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
             catch (Exception ex)
             {
                 log.LogError(ex, $"Error occured during processing order #{orderId}");
-                throw ex;
+                throw;
             }
         }
     }
