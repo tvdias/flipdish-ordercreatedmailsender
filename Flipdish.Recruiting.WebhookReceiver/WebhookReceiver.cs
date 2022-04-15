@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Flipdish.Recruiting.WebhookReceiver.Helpers;
 using Flipdish.Recruiting.WebhookReceiver.Models;
 using Flipdish.Recruiting.WebhookReceiver.Services;
 using Flipdish.Recruiting.WebhookReceiver.Services.Mailer;
@@ -91,7 +92,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
 
                 try
                 {
-                    await mailService.Send("", req.Query["to"], $"New Order #{orderId}", emailOrder, emailRenderer._imagesWithNames);
+                    await mailService.Send(SettingsService.MailSender, req.Query["to"], $"New Order #{orderId}", emailOrder, emailRenderer._imagesWithNames);
                 }
                 catch (Exception ex)
                 {

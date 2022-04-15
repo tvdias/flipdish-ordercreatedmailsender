@@ -21,5 +21,10 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
         {
             get { return "0123456789"; }
         }
+
+        public static string MailSender
+        {
+            get { return "from@email.com"; }
+        }
     }
 }
