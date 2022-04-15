@@ -9,3 +9,15 @@ The parameters are as follows:
 - `currency` - currency to be displayed in the mail
 - `metadatakey` - metadata key for the EAN code (case sensitive)
 - `storeid` - store identifiers control which stores orders we want to process (can add multiple)
+
+#### TODO
+- Measure code coverage
+- Add unit tests to increase code coverage
+- Add app settings
+- Add DI
+- Add logger framework
+- Fix warnings
+- Review code
+- Update to .net 6
+- Add messaging
+- Add external mail service
