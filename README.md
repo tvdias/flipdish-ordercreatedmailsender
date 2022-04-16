@@ -13,8 +13,6 @@ The parameters are as follows:
 #### TODO
 - Measure code coverage
 - Add unit tests to increase code coverage
-- Add app settings
-- Add DI
 - Add logger framework
 - Fix warnings
 - Review code
