@@ -30,7 +30,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
                 .Configure<IConfiguration>((settings, configuration) => configuration.GetSection("AppSettings").Bind(settings));
 
             builder.Services
-                .AddSingleton<EmailRenderer>()
+                .AddSingleton<EmailRendererService>()
                 .AddTransient<EmailService>()
                 .AddTransient<IMailer, SmtpMailer>()
                 .AddSingleton<MapService>();

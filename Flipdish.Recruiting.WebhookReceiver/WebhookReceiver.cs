@@ -17,10 +17,10 @@ namespace Flipdish.Recruiting.WebhookReceiver
     public class WebhookReceiver
     {
         private readonly EmailService _emailService;
-        private readonly EmailRenderer _emailRenderer;
+        private readonly EmailRendererService _emailRenderer;
         private readonly ILogger<WebhookReceiver> _log;
 
-        public WebhookReceiver(EmailService emailService, EmailRenderer emailRenderer, ILogger<WebhookReceiver> log)
+        public WebhookReceiver(EmailService emailService, EmailRendererService emailRenderer, ILogger<WebhookReceiver> log)
         {
             _emailService = emailService;
             _emailRenderer = emailRenderer;
@@ -36,9 +36,14 @@ namespace Flipdish.Recruiting.WebhookReceiver
             {
                 _log.LogInformation("C# HTTP trigger function processed a request.");
 
+                string test = req.Query["test"];
+                var storeIdParams = req.Query["storeId"].ToArray();
+                var currencyString = req.Query["currency"].FirstOrDefault();
+                var barcodeMetadataKey = req.Query["metadataKey"].First() ?? "eancode";
+                var to = req.Query["to"];
+
                 OrderCreatedWebhook orderCreatedWebhook;
 
-                string test = req.Query["test"];
                 if (req.Method == "POST")
                 {
                     var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
@@ -57,10 +62,9 @@ namespace Flipdish.Recruiting.WebhookReceiver
                 }
 
                 var orderCreatedEvent = orderCreatedWebhook.Body;
-
                 orderId = orderCreatedEvent.Order.OrderId;
                 var storeIds = new List<int>();
-                var storeIdParams = req.Query["storeId"].ToArray();
+
                 if (storeIdParams.Length > 0)
                 {
                     foreach (var storeIdString in storeIdParams)
@@ -84,24 +88,13 @@ namespace Flipdish.Recruiting.WebhookReceiver
                 }
 
                 var currency = Currency.EUR;
-                var currencyString = req.Query["currency"].FirstOrDefault();
                 if (!string.IsNullOrEmpty(currencyString) && Enum.TryParse(typeof(Currency), currencyString.ToUpper(), out var currencyObject))
                 {
                     currency = (Currency)currencyObject;
                 }
 
-                var barcodeMetadataKey = req.Query["metadataKey"].First() ?? "eancode";
-
-                var emailOrder = _emailRenderer.RenderEmailOrder(orderCreatedEvent.Order, orderCreatedEvent.AppId, barcodeMetadataKey, currency);
-
-                try
-                {
-                    await _emailService.Send(req.Query["to"], $"New Order #{orderId}", emailOrder, _emailRenderer._imagesWithNames);
-                }
-                catch (Exception ex)
-                {
-                    _log.LogError($"Error occured during sending email for order #{orderId}" + ex);
-                }
+                var emailOrder = _emailRenderer.RenderEmailOrder(orderCreatedEvent.Order, orderCreatedEvent.AppId, barcodeMetadataKey, currency, out var emailImages);
+                await _emailService.Send(to, $"New Order #{orderId}", emailOrder, emailImages);
 
                 _log.LogInformation($"Email sent for order #{orderId}.", new { orderCreatedEvent.Order.OrderId });
 

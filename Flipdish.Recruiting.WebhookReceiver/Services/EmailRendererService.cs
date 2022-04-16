@@ -16,24 +16,26 @@ using NetBarcode;
 
 namespace Flipdish.Recruiting.WebhookReceiver
 {
-    public class EmailRenderer : IDisposable
+    public class EmailRendererService
     {
         private readonly ILogger _log;
         private readonly AppSettings _appSettings;
         private readonly MapService _mapService;
 
-        public EmailRenderer(ILogger<EmailRenderer> log, IOptions<AppSettings> appSettings, MapService mapService)
+        public EmailRendererService(ILogger<EmailRendererService> log, IOptions<AppSettings> appSettings, MapService mapService)
         {
             _log = log;
             _appSettings = appSettings.Value;
             _mapService = mapService;
         }
 
-        public string RenderEmailOrder(Order order, string appNameId, string barcodeMetadataKey, Currency currency)
+        public string RenderEmailOrder(Order order, string appNameId, string barcodeMetadataKey, Currency currency, out Dictionary<string, Stream> imagesWithNames)
         {
+            imagesWithNames = new Dictionary<string, Stream>();
+
             var preorder_partial = order.IsPreOrder == true ? GetPreorderPartial(order) : null;
             var order_status_partial = GetOrderStatusPartial(order, appNameId);
-            var order_items_partial = GetOrderItemsPartial(order, barcodeMetadataKey, currency);
+            var order_items_partial = GetOrderItemsPartial(order, barcodeMetadataKey, currency, imagesWithNames);
             var customer_details_partial = GetCustomerDetailsPartial(order);
 
             var templateStr = GetLiquidFileAsString("RestaurantOrderDetail.liquid");
@@ -41,8 +43,8 @@ namespace Flipdish.Recruiting.WebhookReceiver
 
             var domain = _appSettings.FlipdishDomainWithScheme;
             var orderId = order.OrderId.Value;
-            var mapUrl = String.Empty;
-            var staticMapUrl = String.Empty;
+            var mapUrl = string.Empty;
+            var staticMapUrl = string.Empty;
             double? airDistance = null;
             var supportNumber = _appSettings.RestaurantSupportNumber;
             var physicalRestaurantName = order.Store.Name;
@@ -105,37 +107,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
             var airDistanceStr = airDistance.HasValue ? airDistance.Value.ToString() : "?";
             var currentYear = DateTime.UtcNow.Year.ToString();
 
-            string orderMsg;
-            if (order.DeliveryType == Order.DeliveryTypeEnum.Delivery)
-            {
-                orderMsg = "NEW DELIVERY ORDER";
-            }
-            else if (order.DeliveryType == Order.DeliveryTypeEnum.Pickup)
-            {
-                switch (order.PickupLocationType)
-                {
-                    case Order.PickupLocationTypeEnum.TakeOut:
-                        orderMsg = "NEW COLLECTION ORDER ";
-                        break;
-
-                    case Order.PickupLocationTypeEnum.TableService:
-                        orderMsg = "NEW TABLE SERVICE ORDER ";
-                        break;
-
-                    case Order.PickupLocationTypeEnum.DineIn:
-                        orderMsg = "NEW DINE IN ORDER ";
-                        break;
-
-                    default:
-                        var orderMsgLower = $"NEW {order.PickupLocationType} ORDER";
-                        orderMsg = orderMsgLower.ToUpper();
-                        break;
-                }
-            }
-            else
-            {
-                throw new Exception("Unknown DeliveryType.");
-            }
+            var orderMsg = CreateOrderMessage(order);
             const string openingTag1 = "<span style=\"color: #222; background: #ffc; font-weight: bold; \">";
             const string closingTag1 = "</span>";
             orderMsg = Regex.Replace(orderMsg, "[ ]", "&nbsp;");
@@ -148,6 +120,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
             const string openingTag2 = "<span style=\"font-weight: bold; font-size: inherit; line-height: 24px;color: rgb(208, 93, 104); \">";
             const string closingTag2 = "</span>";
 
+            // TODO: Remove comment below?
             const string taxAmount = null;// (physicalRestaurant?.Menu?.DisplayTax ?? false) ? order.TotalTax.ToRawHtmlCurrencyString(order.Currency) : null;
 
             var resCall_the_Flipdish_ = string.Format("Call the Flipdish Hotline at {0}", openingTag2 + supportNumber + closingTag2);
@@ -213,6 +186,27 @@ namespace Flipdish.Recruiting.WebhookReceiver
             return template.Render(paramaters);
         }
 
+        private static string CreateOrderMessage(Order order)
+        {
+            if (order.DeliveryType == Order.DeliveryTypeEnum.Delivery)
+            {
+                return "NEW DELIVERY ORDER";
+            }
+
+            if (order.DeliveryType == Order.DeliveryTypeEnum.Pickup)
+            {
+                return order.PickupLocationType switch
+                {
+                    Order.PickupLocationTypeEnum.TakeOut => "NEW COLLECTION ORDER ",
+                    Order.PickupLocationTypeEnum.TableService => "NEW TABLE SERVICE ORDER ",
+                    Order.PickupLocationTypeEnum.DineIn => "NEW DINE IN ORDER ",
+                    _ => $"NEW {order.PickupLocationType} ORDER".ToUpper(),
+                };
+            }
+
+            throw new Exception("Unknown DeliveryType.");
+        }
+
         private string GetPreorderPartial(Order order)
         {
             var templateStr = GetLiquidFileAsString("PreorderPartial.liquid");
@@ -268,13 +262,13 @@ namespace Flipdish.Recruiting.WebhookReceiver
             return template.Render(paramaters);
         }
 
-        private string GetOrderItemsPartial(Order order, string barcodeMetadataKey, Currency currency)
+        private string GetOrderItemsPartial(Order order, string barcodeMetadataKey, Currency currency, Dictionary<string, Stream> imagesWithNames)
         {
             var templateStr = GetLiquidFileAsString("OrderItemsPartial.liquid");
             var template = Template.Parse(templateStr);
 
             var chefNote = order.ChefNote;
-            var itemsPart = GetItemsPart(order, barcodeMetadataKey, currency);
+            var itemsPart = GetItemsPart(order, barcodeMetadataKey, currency, imagesWithNames);
 
             const string resSection = "Section";
             const string resItems = "Items";
@@ -346,9 +340,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
             return template.Render(paramaters);
         }
 
-        public Dictionary<string, Stream> _imagesWithNames = new Dictionary<string, Stream>();
-
-        private string GetItemsPart(Order order, string barcodeMetadataKey, Currency currency)
+        private string GetItemsPart(Order order, string barcodeMetadataKey, Currency currency, Dictionary<string, Stream> imagesWithNames)
         {
             var itemsPart = new StringBuilder();
 
@@ -379,9 +371,9 @@ namespace Flipdish.Recruiting.WebhookReceiver
                     {
                         Stream barcodeStream;
 
-                        if (_imagesWithNames.ContainsKey(item.MenuItemUI.Barcode + ".png"))
+                        if (imagesWithNames.ContainsKey(item.MenuItemUI.Barcode + ".png"))
                         {
-                            barcodeStream = _imagesWithNames[item.MenuItemUI.Barcode + ".png"];
+                            barcodeStream = imagesWithNames[item.MenuItemUI.Barcode + ".png"];
                         }
                         else
                         {
@@ -389,8 +381,8 @@ namespace Flipdish.Recruiting.WebhookReceiver
                         }
                         if (barcodeStream != null)
                         {
-                            if (!_imagesWithNames.ContainsKey(item.MenuItemUI.Barcode + ".png"))
-                                _imagesWithNames.Add(item.MenuItemUI.Barcode + ".png", barcodeStream);
+                            if (!imagesWithNames.ContainsKey(item.MenuItemUI.Barcode + ".png"))
+                                imagesWithNames.Add(item.MenuItemUI.Barcode + ".png", barcodeStream);
 
                             itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\"><img style=\"margin-left: 14px;margin-left: 9px;padding-top: 10px; padding-bottom:10px\" src=\"cid:").Append(item.MenuItemUI.Barcode).AppendLine(".png\"/></td>");
                             if (item.Count > 1)
@@ -413,9 +405,9 @@ namespace Flipdish.Recruiting.WebhookReceiver
                         {
                             Stream barcodeStream;
 
-                            if (_imagesWithNames.ContainsKey(option.Barcode + ".png"))
+                            if (imagesWithNames.ContainsKey(option.Barcode + ".png"))
                             {
-                                barcodeStream = _imagesWithNames[option.Barcode + ".png"];
+                                barcodeStream = imagesWithNames[option.Barcode + ".png"];
                             }
                             else
                             {
@@ -423,9 +415,9 @@ namespace Flipdish.Recruiting.WebhookReceiver
                             }
                             if (barcodeStream != null)
                             {
-                                if (!_imagesWithNames.ContainsKey(option.Barcode + ".png"))
+                                if (!imagesWithNames.ContainsKey(option.Barcode + ".png"))
                                 {
-                                    _imagesWithNames.Add(option.Barcode + ".png", barcodeStream);
+                                    imagesWithNames.Add(option.Barcode + ".png", barcodeStream);
                                 }
                                 itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\"><img style=\"margin-left: 14px;margin-left: 9px;padding-top: 10px; padding-bottom:10px\" src=\"cid:").Append(option.Barcode).AppendLine(".png\"/></td>");
                             }
@@ -486,19 +478,6 @@ namespace Flipdish.Recruiting.WebhookReceiver
             result.AppendLine("</tr>");
 
             return result.ToString();
-        }
-
-        public void Dispose()
-        {
-            if (_imagesWithNames == null)
-                return;
-
-            foreach (var kvp in _imagesWithNames)
-            {
-                kvp.Value.Dispose();
-            }
-
-            _imagesWithNames = null;
         }
     }
 }
