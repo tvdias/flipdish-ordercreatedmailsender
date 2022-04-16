@@ -11,7 +11,7 @@ namespace Flipdish.Recruiting.WebhookReceiver.Services
 
         public MapService(IOptions<AppSettings> appSettings)
         {
-            this._appSettings = appSettings.Value;
+            _appSettings = appSettings.Value;
         }
 
         public string GetDynamicMapUrl(double centerLatitude, double centerLongitude, int zoom)

@@ -11,10 +11,8 @@ The parameters are as follows:
 - `storeid` - store identifiers control which stores orders we want to process (can add multiple)
 
 #### TODO
-- Measure code coverage
-- Add unit tests to increase code coverage
+- Add unit tests to increase code coverage (current code coverage: 2.68%)
 - Add logger framework
-- Fix warnings
 - Review code
 - Update to .net 6
 - Add messaging

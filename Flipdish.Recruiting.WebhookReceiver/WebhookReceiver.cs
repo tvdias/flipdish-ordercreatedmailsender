@@ -3,30 +3,24 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Flipdish.Recruiting.WebhookReceiver.Config;
-using Flipdish.Recruiting.WebhookReceiver.Helpers;
 using Flipdish.Recruiting.WebhookReceiver.Models;
 using Flipdish.Recruiting.WebhookReceiver.Services;
-using Flipdish.Recruiting.WebhookReceiver.Services.Mailer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 
 namespace Flipdish.Recruiting.WebhookReceiver
 {
     public class WebhookReceiver
     {
-        private readonly AppSettings _appSettings;
         private readonly EmailService _emailService;
         private readonly EmailRenderer _emailRenderer;
 
-        public WebhookReceiver(IOptions<AppSettings> appSettings, EmailService emailService, EmailRenderer emailRenderer)
+        public WebhookReceiver(EmailService emailService, EmailRenderer emailRenderer)
         {
-            _appSettings = appSettings.Value;
             _emailService = emailService;
             _emailRenderer = emailRenderer;
         }
@@ -70,14 +64,15 @@ namespace Flipdish.Recruiting.WebhookReceiver
                 {
                     foreach (var storeIdString in storeIdParams)
                     {
-                        int storeId = 0;
-                        try
+                        if (int.TryParse(storeIdString, out var storeId))
                         {
-                            storeId = int.Parse(storeIdString);
+                            storeIds.Add(storeId);
                         }
-                        catch (Exception) { }
-
-                        storeIds.Add(storeId);
+                        else
+                        {
+                            // TODO: storeId = 0 is added in order to keep retro compatibility. Can we remove that?
+                            storeIds.Add(0);
+                        }
                     }
 
                     if (!storeIds.Contains(orderCreatedEvent.Order.Store.Id.Value))
