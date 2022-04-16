@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="LiquidTemplates/*.liquid" CopyToOutputDirectory="Always" />
+    <None Include="LiquidTemplates/*.liquid;TestWebhooks/*.json" CopyToOutputDirectory="Always" />
     <None Update="host.json" CopyToOutputDirectory="Always" />
     <None Update="appsettings.json" CopyToOutputDirectory="Always" />
   </ItemGroup>

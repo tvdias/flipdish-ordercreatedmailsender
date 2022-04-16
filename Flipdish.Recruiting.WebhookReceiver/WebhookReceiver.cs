@@ -18,48 +18,49 @@ namespace Flipdish.Recruiting.WebhookReceiver
     {
         private readonly EmailService _emailService;
         private readonly EmailRenderer _emailRenderer;
+        private readonly ILogger<WebhookReceiver> _log;
 
-        public WebhookReceiver(EmailService emailService, EmailRenderer emailRenderer)
+        public WebhookReceiver(EmailService emailService, EmailRenderer emailRenderer, ILogger<WebhookReceiver> log)
         {
             _emailService = emailService;
             _emailRenderer = emailRenderer;
+            _log = log;
         }
 
         [FunctionName("WebhookReceiver")]
-        public async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
-            ILogger log,
-            ExecutionContext context)
+        public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req)
         {
             int? orderId = null;
+
             try
             {
-                log.LogInformation("C# HTTP trigger function processed a request.");
+                _log.LogInformation("C# HTTP trigger function processed a request.");
 
                 OrderCreatedWebhook orderCreatedWebhook;
 
                 string test = req.Query["test"];
-                if (req.Method == "GET" && !string.IsNullOrEmpty(test))
+                if (req.Method == "POST")
                 {
-                    var templateFilePath = Path.Combine(context.FunctionAppDirectory, "TestWebhooks", test);
+                    var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+                    orderCreatedWebhook = JsonConvert.DeserializeObject<OrderCreatedWebhook>(requestBody);
+                }
+                else if (!string.IsNullOrEmpty(test))
+                {
+                    var templateFilePath = Path.Combine("TestWebhooks", test);
                     var testWebhookJson = new StreamReader(templateFilePath).ReadToEnd();
 
                     orderCreatedWebhook = JsonConvert.DeserializeObject<OrderCreatedWebhook>(testWebhookJson);
-                }
-                else if (req.Method == "POST")
-                {
-                    string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-                    orderCreatedWebhook = JsonConvert.DeserializeObject<OrderCreatedWebhook>(requestBody);
                 }
                 else
                 {
                     throw new Exception("No body found or test param.");
                 }
-                OrderCreatedEvent orderCreatedEvent = orderCreatedWebhook.Body;
+
+                var orderCreatedEvent = orderCreatedWebhook.Body;
 
                 orderId = orderCreatedEvent.Order.OrderId;
-                List<int> storeIds = new List<int>();
-                string[] storeIdParams = req.Query["storeId"].ToArray();
+                var storeIds = new List<int>();
+                var storeIdParams = req.Query["storeId"].ToArray();
                 if (storeIdParams.Length > 0)
                 {
                     foreach (var storeIdString in storeIdParams)
@@ -77,14 +78,14 @@ namespace Flipdish.Recruiting.WebhookReceiver
 
                     if (!storeIds.Contains(orderCreatedEvent.Order.Store.Id.Value))
                     {
-                        log.LogInformation($"Skipping order #{orderId}");
+                        _log.LogInformation($"Skipping order #{orderId}");
                         return new ContentResult { Content = $"Skipping order #{orderId}", ContentType = "text/html" };
                     }
                 }
 
-                Currency currency = Currency.EUR;
+                var currency = Currency.EUR;
                 var currencyString = req.Query["currency"].FirstOrDefault();
-                if (!string.IsNullOrEmpty(currencyString) && Enum.TryParse(typeof(Currency), currencyString.ToUpper(), out object currencyObject))
+                if (!string.IsNullOrEmpty(currencyString) && Enum.TryParse(typeof(Currency), currencyString.ToUpper(), out var currencyObject))
                 {
                     currency = (Currency)currencyObject;
                 }
@@ -99,16 +100,16 @@ namespace Flipdish.Recruiting.WebhookReceiver
                 }
                 catch (Exception ex)
                 {
-                    log.LogError($"Error occured during sending email for order #{orderId}" + ex);
+                    _log.LogError($"Error occured during sending email for order #{orderId}" + ex);
                 }
 
-                log.LogInformation($"Email sent for order #{orderId}.", new { orderCreatedEvent.Order.OrderId });
+                _log.LogInformation($"Email sent for order #{orderId}.", new { orderCreatedEvent.Order.OrderId });
 
                 return new ContentResult { Content = emailOrder, ContentType = "text/html" };
             }
             catch (Exception ex)
             {
-                log.LogError(ex, $"Error occured during processing order #{orderId}");
+                _log.LogError(ex, $"Error occured during processing order #{orderId}");
                 throw;
             }
         }

@@ -30,7 +30,7 @@ namespace Flipdish.Recruiting.WebhookReceiverTests
             var to = new List<string>() { "to@email.com" };
             var subject = fixture.Create<string>();
             var body = fixture.Create<string>();
-            Dictionary<string, System.IO.Stream> attachements = new Dictionary<string, System.IO.Stream>();
+            var attachements = new Dictionary<string, System.IO.Stream>();
 
             mailerMock
                 .Setup(m => m.SendMailAsync(It.IsAny<MailMessage>()))
@@ -50,7 +50,7 @@ namespace Flipdish.Recruiting.WebhookReceiverTests
             var to = new List<string>() { "to@email.com" };
             var subject = fixture.Create<string>();
             var body = fixture.Create<string>();
-            Dictionary<string, System.IO.Stream> attachements = new Dictionary<string, System.IO.Stream>();
+            var attachements = new Dictionary<string, System.IO.Stream>();
             var cc = new List<string>() { "tocc@email.com" };
 
             mailerMock

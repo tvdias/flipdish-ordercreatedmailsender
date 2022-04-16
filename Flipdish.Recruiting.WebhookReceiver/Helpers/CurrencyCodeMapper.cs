@@ -28,7 +28,7 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
                 .Select(x => new RegionInfo(x.Name))
                 .ToList();
 
-            foreach (RegionInfo region in regions)
+            foreach (var region in regions)
             {
                 if (!SymbolsByCode.ContainsKey(region.ISOCurrencySymbol.ToUpper()))
                 {

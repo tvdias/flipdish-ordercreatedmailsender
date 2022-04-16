@@ -17,8 +17,8 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
             }
             else
             {
-                double theta = lon1 - lon2;
-                double dist = (Math.Sin(Deg2rad(lat1)) * Math.Sin(Deg2rad(lat2))) + (Math.Cos(Deg2rad(lat1)) * Math.Cos(Deg2rad(lat2)) * Math.Cos(Deg2rad(theta)));
+                var theta = lon1 - lon2;
+                var dist = (Math.Sin(Deg2rad(lat1)) * Math.Sin(Deg2rad(lat2))) + (Math.Cos(Deg2rad(lat1)) * Math.Cos(Deg2rad(lat2)) * Math.Cos(Deg2rad(theta)));
 
                 return Rad2deg(Math.Acos(dist)) * 60 * 1.1515 * 1.609344;
             }

@@ -15,15 +15,15 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
             var result = new List<MenuSectionGrouped>();
 
             var sectionNames = orderItems.Select(a => new { a.MenuSectionName, a.MenuSectionDisplayOrder }).Distinct().ToList();
-            int menuSectionDisplayOrder = 0;
-            foreach (string sectionName in sectionNames.OrderBy(a => a.MenuSectionDisplayOrder).Select(a => a.MenuSectionName))
+            var menuSectionDisplayOrder = 0;
+            foreach (var sectionName in sectionNames.OrderBy(a => a.MenuSectionDisplayOrder).Select(a => a.MenuSectionName))
             {
                 var menuItemsGroupedList = new List<MenuItemsGrouped>();
-                int menuItemDisplayOrder = 0;
-                foreach (OrderItem item in orderItems.Where(a => a.MenuSectionName == sectionName).OrderBy(a => a.MenuItemDisplayOrder))
+                var menuItemDisplayOrder = 0;
+                foreach (var item in orderItems.Where(a => a.MenuSectionName == sectionName).OrderBy(a => a.MenuItemDisplayOrder))
                 {
                     var menuItemUI = new MenuItemUI(item, barcodeMetadataKey);
-                    MenuItemsGrouped menuItemsGrouped = menuItemsGroupedList.SingleOrDefault(a => a.MenuItemUI.HashCode == menuItemUI.HashCode);
+                    var menuItemsGrouped = menuItemsGroupedList.SingleOrDefault(a => a.MenuItemUI.HashCode == menuItemUI.HashCode);
 
                     if (menuItemsGrouped != null)
                     {
@@ -57,7 +57,7 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
 
         public static string ToCurrencyString(this decimal l, Currency currency, CultureInfo cultureInfo)
         {
-            NumberFormatInfo numberFormatInfo = cultureInfo.NumberFormat;
+            var numberFormatInfo = cultureInfo.NumberFormat;
             numberFormatInfo.CurrencySymbol = currency.ToSymbol(); // Replace with "$" or "£" or whatever you need
 
             var formattedPrice = l.ToString("C", numberFormatInfo);
@@ -67,7 +67,7 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
 
         public static string ToCurrencyString(this double l, Currency currency, CultureInfo cultureInfo)
         {
-            NumberFormatInfo numberFormatInfo = cultureInfo.NumberFormat;
+            var numberFormatInfo = cultureInfo.NumberFormat;
             numberFormatInfo.CurrencySymbol = currency.ToSymbol(); // Replace with "$" or "£" or whatever you need
 
             var formattedPrice = l.ToString("C", numberFormatInfo);
@@ -89,16 +89,16 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
 
         public static string ToRawHtmlCurrencyString(this decimal l, Currency currency)
         {
-            string currencyString = l.ToCurrencyString(currency);
-            string result = WebUtility.HtmlEncode(currencyString);
+            var currencyString = l.ToCurrencyString(currency);
+            var result = WebUtility.HtmlEncode(currencyString);
 
             return result.Replace(" ", "&nbsp;");
         }
 
         public static string ToRawHtmlCurrencyString(this double l, Currency currency)
         {
-            string currencyString = l.ToCurrencyString(currency);
-            string result = WebUtility.HtmlEncode(currencyString);
+            var currencyString = l.ToCurrencyString(currency);
+            var result = WebUtility.HtmlEncode(currencyString);
 
             return result.Replace(" ", "&nbsp;");
         }
@@ -110,7 +110,7 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
 
         public static CurrencyItem GetCurrencyItem(this Currency currency)
         {
-            CurrencyItem ci = new CurrencyItem
+            var ci = new CurrencyItem
             {
                 Currency = currency,
                 IsoCode = currency.ToString().ToUpper(),
@@ -143,7 +143,7 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
             // http://stackoverflow.com/questions/36422138/datetime-parsing-error-the-supplied-datetime-represents-an-invalid-time
             try
             {
-                TimeZoneInfo timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(timeZoneInfoId);
+                var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(timeZoneInfoId);
                 return TimeZoneInfo.ConvertTimeFromUtc(utcTime, timeZoneInfo);
             }
             catch (Exception)

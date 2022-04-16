@@ -38,7 +38,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
 
         public override void ConfigureAppConfiguration(IFunctionsConfigurationBuilder builder)
         {
-            FunctionsHostBuilderContext context = builder.GetContext();
+            var context = builder.GetContext();
 
             builder.ConfigurationBuilder
                 .AddJsonFile(Path.Combine(context.ApplicationRootPath, "appsettings.json"), optional: false, reloadOnChange: false)
