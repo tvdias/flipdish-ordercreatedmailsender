@@ -2,7 +2,7 @@
 
 namespace Flipdish.Recruiting.WebhookReceiver.Services.Mailer
 {
-    internal class Attachment
+    public class Attachment
     {
         /// <summary>
         /// Initializes a new instance of the System.Net.Mail.Attachment class with the specified stream and name.

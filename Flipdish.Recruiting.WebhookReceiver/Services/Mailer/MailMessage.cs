@@ -2,7 +2,7 @@
 
 namespace Flipdish.Recruiting.WebhookReceiver.Services.Mailer
 {
-    internal class MailMessage
+    public class MailMessage
     {
         public List<string> To { get; } = new List<string>();
 

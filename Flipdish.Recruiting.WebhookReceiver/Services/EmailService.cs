@@ -1,24 +1,28 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Flipdish.Recruiting.WebhookReceiver.Config;
 using Flipdish.Recruiting.WebhookReceiver.Services.Mailer;
+using Microsoft.Extensions.Options;
 
 namespace Flipdish.Recruiting.WebhookReceiver.Services
 {
-    internal class EmailService
+    public class EmailService
     {
         private readonly IMailer _mailer;
+        private readonly AppSettings _appSettings;
 
-        public EmailService(IMailer mailer)
+        public EmailService(IMailer mailer, IOptions<AppSettings> appSettings)
         {
             _mailer = mailer;
+            _appSettings = appSettings.Value;
         }
 
-        public async Task Send(string from, IEnumerable<string> to, string subject, string body, Dictionary<string, Stream> attachements, IEnumerable<string> cc = null)
+        public async Task Send(IEnumerable<string> to, string subject, string body, Dictionary<string, Stream> attachements, IEnumerable<string> cc = null)
         {
             var mailMessage = new MailMessage
             {
-                From = from,
+                From = _appSettings.MailSender,
                 Subject = subject,
                 Body = body
             };

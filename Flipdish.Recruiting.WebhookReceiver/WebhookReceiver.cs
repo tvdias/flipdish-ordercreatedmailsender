@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Flipdish.Recruiting.WebhookReceiver.Config;
 using Flipdish.Recruiting.WebhookReceiver.Helpers;
 using Flipdish.Recruiting.WebhookReceiver.Models;
 using Flipdish.Recruiting.WebhookReceiver.Services;
@@ -12,21 +13,30 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 
 namespace Flipdish.Recruiting.WebhookReceiver
 {
-    public static class WebhookReceiver
+    public class WebhookReceiver
     {
+        private readonly AppSettings _appSettings;
+        private readonly EmailService _emailService;
+        private readonly EmailRenderer _emailRenderer;
+
+        public WebhookReceiver(IOptions<AppSettings> appSettings, EmailService emailService, EmailRenderer emailRenderer)
+        {
+            _appSettings = appSettings.Value;
+            _emailService = emailService;
+            _emailRenderer = emailRenderer;
+        }
+
         [FunctionName("WebhookReceiver")]
-        public static async Task<IActionResult> Run(
+        public async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
             ILogger log,
             ExecutionContext context)
         {
-            IMailer mailer = new SmtpMailer();
-            var mailService = new EmailService(mailer);
-
             int? orderId = null;
             try
             {
@@ -86,13 +96,11 @@ namespace Flipdish.Recruiting.WebhookReceiver
 
                 var barcodeMetadataKey = req.Query["metadataKey"].First() ?? "eancode";
 
-                using EmailRenderer emailRenderer = new EmailRenderer(orderCreatedEvent.Order, orderCreatedEvent.AppId, barcodeMetadataKey, context.FunctionAppDirectory, log, currency);
-
-                var emailOrder = emailRenderer.RenderEmailOrder();
+                var emailOrder = _emailRenderer.RenderEmailOrder(orderCreatedEvent.Order, orderCreatedEvent.AppId, barcodeMetadataKey, currency);
 
                 try
                 {
-                    await mailService.Send(SettingsService.MailSender, req.Query["to"], $"New Order #{orderId}", emailOrder, emailRenderer._imagesWithNames);
+                    await _emailService.Send(req.Query["to"], $"New Order #{orderId}", emailOrder, _emailRenderer._imagesWithNames);
                 }
                 catch (Exception ex)
                 {

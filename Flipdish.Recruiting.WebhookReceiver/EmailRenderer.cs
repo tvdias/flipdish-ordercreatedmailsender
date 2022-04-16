@@ -6,96 +6,93 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using DotLiquid;
+using Flipdish.Recruiting.WebhookReceiver.Config;
 using Flipdish.Recruiting.WebhookReceiver.Helpers;
 using Flipdish.Recruiting.WebhookReceiver.Models;
+using Flipdish.Recruiting.WebhookReceiver.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NetBarcode;
 
 namespace Flipdish.Recruiting.WebhookReceiver
 {
-    internal class EmailRenderer : IDisposable
+    public class EmailRenderer : IDisposable
     {
-        private readonly Order _order;
-        private readonly string _appNameId;
-        private readonly string _appDirectory;
         private readonly ILogger _log;
-        private readonly Currency _currency;
-        private readonly string _barcodeMetadataKey;
+        private readonly AppSettings _appSettings;
+        private readonly MapService _mapService;
 
-        public EmailRenderer(Order order, string appNameId, string barcodeMetadataKey, string appDirectory, ILogger log, Currency currency)
+        public EmailRenderer(ILogger log, IOptions<AppSettings> appSettings, MapService mapService)
         {
-            _order = order;
-            _appNameId = appNameId;
-            _barcodeMetadataKey = barcodeMetadataKey;
-            _appDirectory = appDirectory;
             _log = log;
-            _currency = currency;
+            _appSettings = appSettings.Value;
+            _mapService = mapService;
         }
 
-        public string RenderEmailOrder()
+        public string RenderEmailOrder(Order order, string appNameId, string barcodeMetadataKey, Currency currency)
         {
-            string preorder_partial = _order.IsPreOrder == true ? GetPreorderPartial() : null;
-            string order_status_partial = GetOrderStatusPartial();
-            string order_items_partial = GetOrderItemsPartial();
-            string customer_details_partial = GetCustomerDetailsPartial();
+            string preorder_partial = order.IsPreOrder == true ? GetPreorderPartial(order) : null;
+            string order_status_partial = GetOrderStatusPartial(order, appNameId);
+            string order_items_partial = GetOrderItemsPartial(order, barcodeMetadataKey, currency);
+            string customer_details_partial = GetCustomerDetailsPartial(order);
 
             string templateStr = GetLiquidFileAsString("RestaurantOrderDetail.liquid");
             Template template = Template.Parse(templateStr);
 
-            string domain = SettingsService.Flipdish_DomainWithScheme;
-            int orderId = _order.OrderId.Value;
+            string domain = _appSettings.FlipdishDomainWithScheme;
+            int orderId = order.OrderId.Value;
             string mapUrl = String.Empty;
             string staticMapUrl = String.Empty;
             double? airDistance = null;
-            string supportNumber = SettingsService.RestaurantSupportNumber;
-            string physicalRestaurantName = _order.Store.Name;
-            string paymentAccountDescription = _order.PaymentAccountDescription;
-            int deliveryTypeNum = (int)_order.DeliveryType;
-            var orderPlacedLocal = _order.PlacedTime.Value.UtcToLocalTime(_order.Store.StoreTimezone);
+            string supportNumber = _appSettings.RestaurantSupportNumber;
+            string physicalRestaurantName = order.Store.Name;
+            string paymentAccountDescription = order.PaymentAccountDescription;
+            int deliveryTypeNum = (int)order.DeliveryType;
+            var orderPlacedLocal = order.PlacedTime.Value.UtcToLocalTime(order.Store.StoreTimezone);
             string tsOrderPlaced = EtaResponseMethods.GetClocksToString(orderPlacedLocal);
             string tsOrderPlacedDayMonth = EtaResponseMethods.GetDateString(orderPlacedLocal);
-            string paid_unpaid = _order.PaymentAccountType != Order.PaymentAccountTypeEnum.Cash ? "PAID" : "UNPAID";
-            string foodAmount = _order.OrderItemsAmount.Value.ToRawHtmlCurrencyString(_currency);
-            string onlineProcessingFee = _order.ProcessingFee.Value.ToRawHtmlCurrencyString(_currency);
-            string deliveryAmount = _order.DeliveryAmount.Value.ToRawHtmlCurrencyString(_currency);
-            string tipAmount = _order.TipAmount.Value.ToRawHtmlCurrencyString(_currency);
-            string totalRestaurantAmount = _order.Amount.Value.ToRawHtmlCurrencyString(_currency);
-            string voucherAmount = _order.Voucher != null ? _order.Voucher.Amount.Value.ToRawHtmlCurrencyString(_currency) : "0";
+            string paid_unpaid = order.PaymentAccountType != Order.PaymentAccountTypeEnum.Cash ? "PAID" : "UNPAID";
+            string foodAmount = order.OrderItemsAmount.Value.ToRawHtmlCurrencyString(currency);
+            string onlineProcessingFee = order.ProcessingFee.Value.ToRawHtmlCurrencyString(currency);
+            string deliveryAmount = order.DeliveryAmount.Value.ToRawHtmlCurrencyString(currency);
+            string tipAmount = order.TipAmount.Value.ToRawHtmlCurrencyString(currency);
+            string totalRestaurantAmount = order.Amount.Value.ToRawHtmlCurrencyString(currency);
+            string voucherAmount = order.Voucher != null ? order.Voucher.Amount.Value.ToRawHtmlCurrencyString(currency) : "0";
 
-            if (_order.Store.Coordinates?.Latitude != null && _order.Store.Coordinates.Longitude != null)
+            if (order.Store.Coordinates?.Latitude != null && order.Store.Coordinates.Longitude != null)
             {
-                if (_order.DeliveryType == Order.DeliveryTypeEnum.Delivery &&
-                    _order.DeliveryLocation.Coordinates != null)
+                if (order.DeliveryType == Order.DeliveryTypeEnum.Delivery &&
+                    order.DeliveryLocation.Coordinates != null)
                 {
                     mapUrl =
-                        GeoUtils.GetDynamicMapUrl(
-                            _order.DeliveryLocation.Coordinates.Latitude.Value,
-                            _order.DeliveryLocation.Coordinates.Longitude.Value, 18);
-                    staticMapUrl = GeoUtils.GetStaticMapUrl(
-                        _order.DeliveryLocation.Coordinates.Latitude.Value,
-                        _order.DeliveryLocation.Coordinates.Longitude.Value,
+                        _mapService.GetDynamicMapUrl(
+                            order.DeliveryLocation.Coordinates.Latitude.Value,
+                            order.DeliveryLocation.Coordinates.Longitude.Value, 18);
+                    staticMapUrl = _mapService.GetStaticMapUrl(
+                        order.DeliveryLocation.Coordinates.Latitude.Value,
+                        order.DeliveryLocation.Coordinates.Longitude.Value,
                         18,
-                        _order.DeliveryLocation.Coordinates.Latitude.Value,
-                        _order.DeliveryLocation.Coordinates.Longitude.Value
+                        order.DeliveryLocation.Coordinates.Latitude.Value,
+                        order.DeliveryLocation.Coordinates.Longitude.Value
                         );
                     var deliveryLocation = new Coordinates(
-                        _order.DeliveryLocation.Coordinates.Latitude.Value,
-                        _order.DeliveryLocation.Coordinates.Longitude.Value);
+                        order.DeliveryLocation.Coordinates.Latitude.Value,
+                        order.DeliveryLocation.Coordinates.Longitude.Value);
                     var storeCoordinates = new Coordinates(
-                        _order.Store.Coordinates.Latitude.Value,
-                        _order.Store.Coordinates.Longitude.Value);
+                        order.Store.Coordinates.Latitude.Value,
+                        order.Store.Coordinates.Longitude.Value);
                     airDistance = GeoUtils.GetAirDistance(deliveryLocation, storeCoordinates);
                 }
-                else if (_order.DeliveryType == Order.DeliveryTypeEnum.Pickup &&
-                         _order.CustomerLocation != null)
+                else if (order.DeliveryType == Order.DeliveryTypeEnum.Pickup &&
+                         order.CustomerLocation != null)
                 {
                     Coordinates userLocation =
                          new Coordinates(
-                            _order.CustomerLocation.Latitude.Value,
-                            _order.CustomerLocation.Longitude.Value);
+                            order.CustomerLocation.Latitude.Value,
+                            order.CustomerLocation.Longitude.Value);
                     var storeCoordinates = new Coordinates(
-                        _order.Store.Coordinates.Latitude.Value,
-                        _order.Store.Coordinates.Longitude.Value);
+                        order.Store.Coordinates.Latitude.Value,
+                        order.Store.Coordinates.Longitude.Value);
                     airDistance = GeoUtils.GetAirDistance(userLocation, storeCoordinates);
                 }
             }
@@ -109,13 +106,13 @@ namespace Flipdish.Recruiting.WebhookReceiver
             string currentYear = DateTime.UtcNow.Year.ToString();
 
             string orderMsg;
-            if (_order.DeliveryType == Order.DeliveryTypeEnum.Delivery)
+            if (order.DeliveryType == Order.DeliveryTypeEnum.Delivery)
             {
                 orderMsg = "NEW DELIVERY ORDER";
             }
-            else if (_order.DeliveryType == Order.DeliveryTypeEnum.Pickup)
+            else if (order.DeliveryType == Order.DeliveryTypeEnum.Pickup)
             {
-                switch (_order.PickupLocationType)
+                switch (order.PickupLocationType)
                 {
                     case Order.PickupLocationTypeEnum.TakeOut:
                         orderMsg = "NEW COLLECTION ORDER ";
@@ -130,7 +127,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
                         break;
 
                     default:
-                        string orderMsgLower = $"NEW {_order.PickupLocationType} ORDER";
+                        string orderMsgLower = $"NEW {order.PickupLocationType} ORDER";
                         orderMsg = orderMsgLower.ToUpper();
                         break;
                 }
@@ -206,7 +203,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
                     resTotal,
                     resCustomer_Location,
                     resDistance,
-                    appNameId = _appNameId,
+                    appNameId,
                     taxAmount,
                     resTax
                 }),
@@ -216,12 +213,12 @@ namespace Flipdish.Recruiting.WebhookReceiver
             return template.Render(paramaters);
         }
 
-        private string GetPreorderPartial()
+        private string GetPreorderPartial(Order order)
         {
             string templateStr = GetLiquidFileAsString("PreorderPartial.liquid");
             Template template = Template.Parse(templateStr);
 
-            DateTime reqForLocal = _order.RequestedForTime.Value.UtcToLocalTime(_order.Store.StoreTimezone);
+            DateTime reqForLocal = order.RequestedForTime.Value.UtcToLocalTime(order.Store.StoreTimezone);
 
             string reqestedForDateStr = EtaResponseMethods.GetDateString(reqForLocal);
             string reqestedForTimeStr = EtaResponseMethods.GetClocksToString(reqForLocal);
@@ -243,14 +240,14 @@ namespace Flipdish.Recruiting.WebhookReceiver
 
         private string GetLiquidFileAsString(string fileName)
         {
-            var templateFilePath = Path.Combine(_appDirectory, "LiquidTemplates", fileName);
+            var templateFilePath = Path.Combine("./LiquidTemplates", fileName);
             return new StreamReader(templateFilePath).ReadToEnd();
         }
 
-        private string GetOrderStatusPartial()
+        private string GetOrderStatusPartial(Order order, string appNameId)
         {
-            int orderId = _order.OrderId.Value;
-            string webLink = string.Format(SettingsService.EmailServiceOrderUrl, _appNameId, orderId);
+            int orderId = order.OrderId.Value;
+            string webLink = string.Format(_appSettings.EmailServiceOrderUrl, appNameId, orderId);
 
             const string resOrder = "Order";
             const string resView_Order = "View Order";
@@ -271,13 +268,13 @@ namespace Flipdish.Recruiting.WebhookReceiver
             return template.Render(paramaters);
         }
 
-        private string GetOrderItemsPartial()
+        private string GetOrderItemsPartial(Order order, string barcodeMetadataKey, Currency currency)
         {
             string templateStr = GetLiquidFileAsString("OrderItemsPartial.liquid");
             Template template = Template.Parse(templateStr);
 
-            string chefNote = _order.ChefNote;
-            string itemsPart = GetItemsPart();
+            string chefNote = order.ChefNote;
+            string itemsPart = GetItemsPart(order, barcodeMetadataKey, currency);
 
             const string resSection = "Section";
             const string resItems = "Items";
@@ -287,7 +284,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
 
             const string customerLocationLabel = "Customer Location";
 
-            string customerPickupLocation = GetCustomerPickupLocationMessage();
+            string customerPickupLocation = GetCustomerPickupLocationMessage(order);
 
             var paramaters = new RenderParameters(CultureInfo.CurrentCulture)
             {
@@ -308,27 +305,27 @@ namespace Flipdish.Recruiting.WebhookReceiver
             return template.Render(paramaters);
         }
 
-        private string GetCustomerPickupLocationMessage()
+        private string GetCustomerPickupLocationMessage(Order order)
         {
-            if (!_order.DropOffLocationId.HasValue || _order.PickupLocationType != Order.PickupLocationTypeEnum.TableService)
+            if (!order.DropOffLocationId.HasValue || order.PickupLocationType != Order.PickupLocationTypeEnum.TableService)
                 return null;
 
-            string tableServiceCategoryMessage = _order.TableServiceCatagory.Value.GetTableServiceCategoryLabel();
-            return $"{tableServiceCategoryMessage}: {_order.DropOffLocation}";
+            string tableServiceCategoryMessage = order.TableServiceCatagory.Value.GetTableServiceCategoryLabel();
+            return $"{tableServiceCategoryMessage}: {order.DropOffLocation}";
         }
 
-        private string GetCustomerDetailsPartial()
+        private string GetCustomerDetailsPartial(Order order)
         {
             string templateStr = GetLiquidFileAsString("CustomerDetailsPartial.liquid");
             Template template = Template.Parse(templateStr);
 
-            string domain = SettingsService.Flipdish_DomainWithScheme;
-            string customerName = _order.Customer.Name;
-            string deliveryInstructions = _order?.DeliveryLocation?.DeliveryInstructions;
-            string deliveryLocationAddressString = _order?.DeliveryLocation?.PrettyAddressString;
+            string domain = _appSettings.FlipdishDomainWithScheme;
+            string customerName = order.Customer.Name;
+            string deliveryInstructions = order.DeliveryLocation?.DeliveryInstructions;
+            string deliveryLocationAddressString = order.DeliveryLocation?.PrettyAddressString;
 
-            string phoneNumber = _order.Customer.PhoneNumberLocalFormat;
-            bool isDelivery = _order.DeliveryType == Order.DeliveryTypeEnum.Delivery;
+            string phoneNumber = order.Customer.PhoneNumberLocalFormat;
+            bool isDelivery = order.DeliveryType == Order.DeliveryTypeEnum.Delivery;
 
             const string resDelivery_Instructions = "Delivery Instructions";
 
@@ -351,7 +348,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
 
         public Dictionary<string, Stream> _imagesWithNames = new Dictionary<string, Stream>();
 
-        private string GetItemsPart()
+        private string GetItemsPart(Order order, string barcodeMetadataKey, Currency currency)
         {
             StringBuilder itemsPart = new StringBuilder();
 
@@ -360,7 +357,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
             itemsPart.AppendLine("<td cellpadding=\"2px\" valign=\"top\"></td>");
             itemsPart.AppendLine("</tr>");
             itemsPart.AppendLine(GetSpaceDivider());
-            List<MenuSectionGrouped> sectionsGrouped = OrderHelper.GetMenuSectionGroupedList(_order.OrderItems, _barcodeMetadataKey);
+            List<MenuSectionGrouped> sectionsGrouped = OrderHelper.GetMenuSectionGroupedList(order.OrderItems, barcodeMetadataKey);
             var last = sectionsGrouped.Last();
             foreach (var section in sectionsGrouped)
             {
@@ -375,7 +372,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
                     itemsPart.AppendLine("<tr>");
                     string countStr = item.Count > 1 ? $"{item.Count} x " : string.Empty;
                     itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\" style=\"padding-left: 40px;\">").Append(countStr).Append(item.MenuItemUI.Name).AppendLine("</td>");
-                    string itemPriceStr = item.MenuItemUI.Price.HasValue ? (item.MenuItemUI.Price.Value * item.Count).ToRawHtmlCurrencyString(_currency) : string.Empty;
+                    string itemPriceStr = item.MenuItemUI.Price.HasValue ? (item.MenuItemUI.Price.Value * item.Count).ToRawHtmlCurrencyString(currency) : string.Empty;
                     itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\">").Append(itemPriceStr).AppendLine("</td>");
 
                     if (!string.IsNullOrEmpty(item.MenuItemUI.Barcode))
@@ -388,7 +385,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
                         }
                         else
                         {
-                            barcodeStream = GetBase64EAN13Barcode(item.MenuItemUI.Barcode);
+                            barcodeStream = GetBase64EAN13Barcode(item.MenuItemUI.Barcode, order);
                         }
                         if (barcodeStream != null)
                         {
@@ -410,7 +407,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
                     {
                         itemsPart.AppendLine("<tr>");
                         itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\" style=\"padding-left: 40px;padding-top: 10px; padding-bottom:10px\">+ ").Append(option.Name).AppendLine("</td>");
-                        itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\">").Append((option.Price * item.Count).ToRawHtmlCurrencyString(_currency)).AppendLine("</td>");
+                        itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\">").Append((option.Price * item.Count).ToRawHtmlCurrencyString(currency)).AppendLine("</td>");
 
                         if (!string.IsNullOrEmpty(option.Barcode))
                         {
@@ -422,7 +419,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
                             }
                             else
                             {
-                                barcodeStream = GetBase64EAN13Barcode(option.Barcode);
+                                barcodeStream = GetBase64EAN13Barcode(option.Barcode, order);
                             }
                             if (barcodeStream != null)
                             {
@@ -447,7 +444,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
             return itemsPart.ToString();
         }
 
-        private Stream GetBase64EAN13Barcode(string barcodeNumbers)
+        private Stream GetBase64EAN13Barcode(string barcodeNumbers, Order order)
         {
             try
             {
@@ -458,7 +455,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
             }
             catch (Exception ex)
             {
-                _log.LogError(ex, $"{barcodeNumbers} is not a valid barcode for order #{_order.OrderId}");
+                _log.LogError(ex, $"{barcodeNumbers} is not a valid barcode for order #{order.OrderId}");
                 return null;
             }
         }
