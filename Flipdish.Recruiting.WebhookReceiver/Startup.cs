@@ -5,6 +5,9 @@ using Flipdish.Recruiting.WebhookReceiver.Services.Mailer;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Serilog;
+using Serilog.Extensions.Logging;
 
 [assembly: FunctionsStartup(typeof(Flipdish.Recruiting.WebhookReceiver.Startup))]
 
@@ -14,6 +17,14 @@ namespace Flipdish.Recruiting.WebhookReceiver
     {
         public override void Configure(IFunctionsHostBuilder builder)
         {
+            var logger = new LoggerConfiguration()
+                .WriteTo.Console()
+                .CreateLogger();
+
+            builder.Services
+                .AddLogging(lb => lb.AddSerilog(logger))
+                .AddSingleton<ILoggerFactory>(_ => new SerilogLoggerFactory(logger, false));
+
             builder.Services
                 .AddOptions<AppSettings>()
                 .Configure<IConfiguration>((settings, configuration) => configuration.GetSection("AppSettings").Bind(settings));
