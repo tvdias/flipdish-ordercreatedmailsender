@@ -2,7 +2,7 @@ name: Build and deploy .NET Core Function App to Azure functions app
 on:
   push:
     branches:
-    - feat/refactor_all_in_one
+    - master
 env:
   AZURE_FUNCTIONAPP_NAME: FlipdishRecruitingWebhookReceiver
   AZURE_FUNCTIONAPP_PACKAGE_PATH: publish
