@@ -28,6 +28,9 @@ namespace Flipdish.Recruiting.WebhookReceiver
             builder.Services
                 .AddOptions<AppSettings>()
                 .Configure<IConfiguration>((settings, configuration) => configuration.GetSection("AppSettings").Bind(settings));
+            builder.Services
+                .AddOptions<SmtpSettings>()
+                .Configure<IConfiguration>((settings, configuration) => configuration.GetSection("SmtpSettings").Bind(settings));
 
             builder.Services
                 .AddSingleton<EmailRendererService>()
