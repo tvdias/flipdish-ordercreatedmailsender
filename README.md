@@ -16,4 +16,3 @@ The parameters are as follows:
 - Add unit tests to increase code coverage (current code coverage: 2.68%)
 - Configure Serilog on app settings file and replace sink
 - Review code
-- Add external mail service

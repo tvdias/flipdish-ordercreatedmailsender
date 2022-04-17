@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net.Http;
 using Flipdish.Recruiting.WebhookReceiver.Config;
 using Flipdish.Recruiting.WebhookReceiver.Services;
 using Flipdish.Recruiting.WebhookReceiver.Services.Mailer;
@@ -7,7 +8,7 @@ using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Polly;
 using SendGrid;
 using Serilog;
 using Serilog.Extensions.Logging;
@@ -35,10 +36,11 @@ namespace Flipdish.Recruiting.WebhookReceiver
                 .AddOptions<SmtpSettings>()
                 .Configure<IConfiguration>((settings, configuration) => configuration.GetSection("SmtpSettings").Bind(settings));
 
+            SetMailingService(builder);
+
             builder.Services
                 .AddSingleton<EmailRendererService>()
                 .AddTransient<EmailService>()
-                .AddTransient<IMailer>(GetMailingService)
                 .AddSingleton<MapService>();
         }
 
@@ -52,19 +54,27 @@ namespace Flipdish.Recruiting.WebhookReceiver
                 .AddEnvironmentVariables();
         }
 
-        private IMailer GetMailingService(IServiceProvider sp)
+        private static void SetMailingService(IFunctionsHostBuilder builder)
         {
-            var appSettings = sp.GetRequiredService<IOptions<AppSettings>>().Value;
+            var sendgridApiKey = builder.GetContext().Configuration.GetValue<string>("AppSettings:SendgridApiKey");
 
-            if (!string.IsNullOrWhiteSpace(appSettings.SendgridApiKey))
+            if (string.IsNullOrWhiteSpace(sendgridApiKey))
             {
-                var sendGridClient = new SendGridClient(appSettings.SendgridApiKey);
-                return new SendgridMailer(sendGridClient);
+                builder.Services.AddTransient<IMailer, SmtpMailer>();
+                return;
             }
 
-            var smtpOptions = sp.GetRequiredService<IOptions<SmtpSettings>>();
+            builder.Services
+                .AddHttpClient<SendGridClient>("SendGrid")
+                .AddTransientHttpErrorPolicy(builder => builder.WaitAndRetryAsync(3, _ => TimeSpan.FromMilliseconds(100)));
 
-            return new SmtpMailer(smtpOptions);
+            builder.Services.AddSingleton<ISendGridClient>(sp =>
+            {
+                var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient("SendGrid");
+                return new SendGridClient(httpClient, sendgridApiKey);
+            });
+
+            builder.Services.AddSingleton<IMailer, SendgridMailer>();
         }
     }
 }
