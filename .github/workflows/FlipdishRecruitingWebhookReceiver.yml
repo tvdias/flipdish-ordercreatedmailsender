@@ -5,10 +5,11 @@ on:
     - feat/refactor_all_in_one
 env:
   AZURE_FUNCTIONAPP_NAME: FlipdishRecruitingWebhookReceiver
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: Flipdish.Recruiting.WebhookReceiver/publish
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: publish
   CONFIGURATION: Release
   DOTNET_CORE_VERSION: 6.0.x
-  WORKING_DIRECTORY: Flipdish.Recruiting.WebhookReceiver
+  PROJECT_TO_PUBLISH: Flipdish.Recruiting.WebhookReceiver
+  SOLUTION_FILE: FlipdishInterview.sln
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -19,13 +20,13 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
     - name: Restore
-      run: dotnet restore "${{ env.WORKING_DIRECTORY }}"
+      run: dotnet restore ${{ env.SOLUTION_FILE }}
     - name: Build
-      run: dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
+      run: dotnet build ${{ env.SOLUTION_FILE }} -c ${{ env.CONFIGURATION }} --no-restore
     - name: Test
-      run: dotnet test "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
+      run: dotnet test ${{ env.SOLUTION_FILE }} -c ${{ env.CONFIGURATION }} --no-restore
     - name: Publish
-      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}"
+      run: dotnet publish ${{ env.PROJECT_TO_PUBLISH }} -c ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}"
     - name: Deploy to Azure Function App
       uses: Azure/functions-action@v1
       with:
