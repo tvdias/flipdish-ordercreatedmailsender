@@ -8,6 +8,8 @@
 
         public string GoogleStaticMapsApiKey { get; set; }
 
+        public string SendgridApiKey { get; set; }
+
         public string MailSender { get; set; }
 
         public string RestaurantSupportNumber { get; set; }

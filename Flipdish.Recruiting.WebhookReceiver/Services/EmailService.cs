@@ -36,10 +36,7 @@ namespace Flipdish.Recruiting.WebhookReceiver.Services
 
             foreach (var nameAndStreamPair in attachements)
             {
-                var attachment = new Attachment(nameAndStreamPair.Value, nameAndStreamPair.Key)
-                {
-                    ContentId = nameAndStreamPair.Key
-                };
+                var attachment = new Attachment(nameAndStreamPair.Key, "image/png", nameAndStreamPair.Value);
 
                 mailMessage.Attachments.Add(attachment);
             }

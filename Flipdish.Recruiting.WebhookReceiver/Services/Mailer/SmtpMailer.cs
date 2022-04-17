@@ -36,6 +36,8 @@ namespace Flipdish.Recruiting.WebhookReceiver.Services.Mailer
                     ContentId = entry.ContentId
                 };
 
+                attachment.ContentDisposition.Inline = true;
+
                 mailMessage.Attachments.Add(attachment);
             }
 

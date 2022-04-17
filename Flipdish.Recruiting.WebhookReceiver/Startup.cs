@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Flipdish.Recruiting.WebhookReceiver.Config;
 using Flipdish.Recruiting.WebhookReceiver.Services;
 using Flipdish.Recruiting.WebhookReceiver.Services.Mailer;
@@ -6,6 +7,8 @@ using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using SendGrid;
 using Serilog;
 using Serilog.Extensions.Logging;
 
@@ -35,7 +38,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
             builder.Services
                 .AddSingleton<EmailRendererService>()
                 .AddTransient<EmailService>()
-                .AddTransient<IMailer, SmtpMailer>()
+                .AddTransient<IMailer>(GetMailingService)
                 .AddSingleton<MapService>();
         }
 
@@ -47,6 +50,21 @@ namespace Flipdish.Recruiting.WebhookReceiver
                 .AddJsonFile(Path.Combine(context.ApplicationRootPath, "appsettings.json"), optional: false, reloadOnChange: false)
                 .AddJsonFile(Path.Combine(context.ApplicationRootPath, $"appsettings.{context.EnvironmentName}.json"), optional: true, reloadOnChange: false)
                 .AddEnvironmentVariables();
+        }
+
+        private IMailer GetMailingService(IServiceProvider sp)
+        {
+            var appSettings = sp.GetRequiredService<IOptions<AppSettings>>().Value;
+
+            if (!string.IsNullOrWhiteSpace(appSettings.SendgridApiKey))
+            {
+                var sendGridClient = new SendGridClient(appSettings.SendgridApiKey);
+                return new SendgridMailer(sendGridClient);
+            }
+
+            var smtpOptions = sp.GetRequiredService<IOptions<SmtpSettings>>();
+
+            return new SmtpMailer(smtpOptions);
         }
     }
 }
