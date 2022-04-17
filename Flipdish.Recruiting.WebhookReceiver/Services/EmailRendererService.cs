@@ -22,6 +22,9 @@ namespace Flipdish.Recruiting.WebhookReceiver
         private readonly AppSettings _appSettings;
         private readonly MapService _mapService;
 
+        private const string SPACE_DIVIDER = "<tr><td colspan=\"2\" align =\"center\" valign=\"top\"><table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" align=\"center\" style=\"height: 22px;\"></table></td></tr>";
+        private const string LINE_DIVIDER = "<tr><td colspan=\"2\" align =\"center\" valign=\"top\"><table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" align=\"center\" style=\"height: 1px; background-color: rgb(186, 186, 186);\"></table></td></tr>";
+
         public EmailRendererService(ILogger<EmailRendererService> log, IOptions<AppSettings> appSettings, MapService mapService)
         {
             _log = log;
@@ -38,8 +41,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
             var order_items_partial = GetOrderItemsPartial(order, barcodeMetadataKey, currency, imagesWithNames);
             var customer_details_partial = GetCustomerDetailsPartial(order);
 
-            var templateStr = GetLiquidFileAsString("RestaurantOrderDetail.liquid");
-            var template = Template.Parse(templateStr);
+            var template = GetLiquidTemplate("RestaurantOrderDetail.liquid");
 
             var domain = _appSettings.FlipdishDomainWithScheme;
             var orderId = order.OrderId.Value;
@@ -61,53 +63,14 @@ namespace Flipdish.Recruiting.WebhookReceiver
             var totalRestaurantAmount = order.Amount.Value.ToRawHtmlCurrencyString(currency);
             var voucherAmount = order.Voucher != null ? order.Voucher.Amount.Value.ToRawHtmlCurrencyString(currency) : "0";
 
-            if (order.Store.Coordinates?.Latitude != null && order.Store.Coordinates.Longitude != null)
-            {
-                if (order.DeliveryType == Order.DeliveryTypeEnum.Delivery &&
-                    order.DeliveryLocation.Coordinates != null)
-                {
-                    mapUrl =
-                        _mapService.GetDynamicMapUrl(
-                            order.DeliveryLocation.Coordinates.Latitude.Value,
-                            order.DeliveryLocation.Coordinates.Longitude.Value, 18);
-                    staticMapUrl = _mapService.GetStaticMapUrl(
-                        order.DeliveryLocation.Coordinates.Latitude.Value,
-                        order.DeliveryLocation.Coordinates.Longitude.Value,
-                        18,
-                        order.DeliveryLocation.Coordinates.Latitude.Value,
-                        order.DeliveryLocation.Coordinates.Longitude.Value
-                        );
-                    var deliveryLocation = new Coordinates(
-                        order.DeliveryLocation.Coordinates.Latitude.Value,
-                        order.DeliveryLocation.Coordinates.Longitude.Value);
-                    var storeCoordinates = new Coordinates(
-                        order.Store.Coordinates.Latitude.Value,
-                        order.Store.Coordinates.Longitude.Value);
-                    airDistance = GeoUtils.GetAirDistance(deliveryLocation, storeCoordinates);
-                }
-                else if (order.DeliveryType == Order.DeliveryTypeEnum.Pickup &&
-                         order.CustomerLocation != null)
-                {
-                    var userLocation =
-                         new Coordinates(
-                            order.CustomerLocation.Latitude.Value,
-                            order.CustomerLocation.Longitude.Value);
-                    var storeCoordinates = new Coordinates(
-                        order.Store.Coordinates.Latitude.Value,
-                        order.Store.Coordinates.Longitude.Value);
-                    airDistance = GeoUtils.GetAirDistance(userLocation, storeCoordinates);
-                }
-            }
+            FillGeoData(order, ref mapUrl, ref staticMapUrl, ref airDistance);
 
-            if (airDistance.HasValue)
-            {
-                airDistance = Math.Round(airDistance.Value, 1);
-            }
-
-            var airDistanceStr = airDistance.HasValue ? airDistance.Value.ToString() : "?";
+            var airDistanceStr = airDistance.HasValue ? Math.Round(airDistance.Value, 1).ToString() : "?";
             var currentYear = DateTime.UtcNow.Year.ToString();
 
             var orderMsg = CreateOrderMessage(order);
+
+            // TODO: Do we really need this?
             const string openingTag1 = "<span style=\"color: #222; background: #ffc; font-weight: bold; \">";
             const string closingTag1 = "</span>";
             orderMsg = Regex.Replace(orderMsg, "[ ]", "&nbsp;");
@@ -117,13 +80,10 @@ namespace Flipdish.Recruiting.WebhookReceiver
             const string resUNPAID = "UNPAID";
             var resDistance = string.Format("{0} km from restaurant", airDistanceStr);
 
-            const string openingTag2 = "<span style=\"font-weight: bold; font-size: inherit; line-height: 24px;color: rgb(208, 93, 104); \">";
-            const string closingTag2 = "</span>";
-
             // TODO: Remove comment below?
             const string taxAmount = null;// (physicalRestaurant?.Menu?.DisplayTax ?? false) ? order.TotalTax.ToRawHtmlCurrencyString(order.Currency) : null;
 
-            var resCall_the_Flipdish_ = string.Format("Call the Flipdish Hotline at {0}", openingTag2 + supportNumber + closingTag2);
+            var resCall_the_Flipdish_ = $"Call the Flipdish Hotline at <span style=\"font-weight: bold; font-size: inherit; line-height: 24px;color: rgb(208, 93, 104); \">{supportNumber}</span>";
 
             const string resRestaurant_New_Order_Mail = "Restaurant New Order Mail";
             const string resVIEW_ONLINE = "VIEW ONLINE";
@@ -186,6 +146,39 @@ namespace Flipdish.Recruiting.WebhookReceiver
             return template.Render(paramaters);
         }
 
+        private void FillGeoData(Order order, ref string mapUrl, ref string staticMapUrl, ref double? airDistance)
+        {
+            if ((order.Store.Coordinates?.Latitude) == null || order.Store.Coordinates.Longitude == null)
+            {
+                return;
+            }
+
+            if (order.DeliveryType == Order.DeliveryTypeEnum.Delivery &&
+                order.DeliveryLocation.Coordinates?.Latitude != null && order.DeliveryLocation.Coordinates?.Longitude != null)
+            {
+                mapUrl = _mapService.GetDynamicMapUrl(
+                        order.DeliveryLocation.Coordinates.Latitude.Value,
+                        order.DeliveryLocation.Coordinates.Longitude.Value,
+                        18);
+
+                staticMapUrl = _mapService.GetStaticMapUrl(
+                    order.DeliveryLocation.Coordinates.Latitude.Value,
+                    order.DeliveryLocation.Coordinates.Longitude.Value,
+                    18,
+                    order.DeliveryLocation.Coordinates.Latitude.Value,
+                    order.DeliveryLocation.Coordinates.Longitude.Value);
+
+                airDistance = GeoUtils.GetAirDistance(order.DeliveryLocation.Coordinates, order.Store.Coordinates);
+                return;
+            }
+
+            if (order.DeliveryType == Order.DeliveryTypeEnum.Pickup &&
+                     order.CustomerLocation?.Latitude != null && order.CustomerLocation?.Longitude != null)
+            {
+                airDistance = GeoUtils.GetAirDistance(order.CustomerLocation, order.Store.Coordinates);
+            }
+        }
+
         private static string CreateOrderMessage(Order order)
         {
             if (order.DeliveryType == Order.DeliveryTypeEnum.Delivery)
@@ -209,8 +202,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
 
         private string GetPreorderPartial(Order order)
         {
-            var templateStr = GetLiquidFileAsString("PreorderPartial.liquid");
-            var template = Template.Parse(templateStr);
+            var template = GetLiquidTemplate("PreorderPartial.liquid");
 
             var reqForLocal = order.RequestedForTime.Value.UtcToLocalTime(order.Store.StoreTimezone);
 
@@ -232,12 +224,6 @@ namespace Flipdish.Recruiting.WebhookReceiver
             return template.Render(paramaters);
         }
 
-        private string GetLiquidFileAsString(string fileName)
-        {
-            var templateFilePath = Path.Combine("./LiquidTemplates", fileName);
-            return new StreamReader(templateFilePath).ReadToEnd();
-        }
-
         private string GetOrderStatusPartial(Order order, string appNameId)
         {
             var orderId = order.OrderId.Value;
@@ -246,8 +232,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
             const string resOrder = "Order";
             const string resView_Order = "View Order";
 
-            var templateStr = GetLiquidFileAsString("OrderStatusPartial.liquid");
-            var template = Template.Parse(templateStr);
+            var template = GetLiquidTemplate("OrderStatusPartial.liquid");
             var paramaters = new RenderParameters(CultureInfo.CurrentCulture)
             {
                 LocalVariables = Hash.FromAnonymousObject(new
@@ -264,8 +249,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
 
         private string GetOrderItemsPartial(Order order, string barcodeMetadataKey, Currency currency, Dictionary<string, Stream> imagesWithNames)
         {
-            var templateStr = GetLiquidFileAsString("OrderItemsPartial.liquid");
-            var template = Template.Parse(templateStr);
+            var template = GetLiquidTemplate("OrderItemsPartial.liquid");
 
             var chefNote = order.ChefNote;
             var itemsPart = GetItemsPart(order, barcodeMetadataKey, currency, imagesWithNames);
@@ -310,8 +294,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
 
         private string GetCustomerDetailsPartial(Order order)
         {
-            var templateStr = GetLiquidFileAsString("CustomerDetailsPartial.liquid");
-            var template = Template.Parse(templateStr);
+            var template = GetLiquidTemplate("CustomerDetailsPartial.liquid");
 
             var domain = _appSettings.FlipdishDomainWithScheme;
             var customerName = order.Customer.Name;
@@ -340,56 +323,60 @@ namespace Flipdish.Recruiting.WebhookReceiver
             return template.Render(paramaters);
         }
 
+        private Template GetLiquidTemplate(string fileName)
+        {
+            var templateFilePath = Path.Combine("./LiquidTemplates", fileName);
+            return Template.Parse(new StreamReader(templateFilePath).ReadToEnd());
+        }
+
         private string GetItemsPart(Order order, string barcodeMetadataKey, Currency currency, Dictionary<string, Stream> imagesWithNames)
         {
             var itemsPart = new StringBuilder();
 
-            itemsPart.AppendLine("<tr>");
-            itemsPart.AppendLine("<td cellpadding=\"2px\" valign=\"top\" style=\"font-weight: bold;\">Order items</td>");
-            itemsPart.AppendLine("<td cellpadding=\"2px\" valign=\"top\"></td>");
-            itemsPart.AppendLine("</tr>");
-            itemsPart.AppendLine(GetSpaceDivider());
-            var sectionsGrouped = OrderHelper.GetMenuSectionGroupedList(order.OrderItems, barcodeMetadataKey);
-            var last = sectionsGrouped.Last();
-            foreach (var section in sectionsGrouped)
+            itemsPart.AppendLine("<tr><td cellpadding=\"2px\" valign=\"top\" style=\"font-weight: bold;\">Order items</td><td cellpadding=\"2px\" valign=\"top\"></td></tr>");
+
+            foreach (var section in GetMenuSectionGroupedList(order.OrderItems, barcodeMetadataKey))
             {
-                itemsPart.AppendLine("<tr>");
-                itemsPart.Append("<td cellpadding=\"2px\" valign=\"top\" style=\"font-size: 14px;\">").Append(section.Name.ToUpper()).AppendLine("</td>");
-                itemsPart.AppendLine("<td cellpadding=\"2px\" valign=\"top\" style=\"font-size: 14px;\"></td>");
-                itemsPart.AppendLine("</tr>");
-                itemsPart.AppendLine(GetLineDivider());
-                itemsPart.AppendLine(GetSpaceDivider());
+                itemsPart.AppendLine(SPACE_DIVIDER);
+                itemsPart
+                    .Append("<tr><td cellpadding=\"2px\" valign=\"top\" style=\"font-size: 14px;\">")
+                    .Append(section.Name.ToUpper())
+                    .AppendLine("</td><td cellpadding=\"2px\" valign=\"top\" style=\"font-size: 14px;\"></td></tr>")
+                    .AppendLine(LINE_DIVIDER)
+                    .AppendLine(SPACE_DIVIDER);
+
                 foreach (var item in section.MenuItemsGroupedList)
                 {
-                    itemsPart.AppendLine("<tr>");
                     var countStr = item.Count > 1 ? $"{item.Count} x " : string.Empty;
-                    itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\" style=\"padding-left: 40px;\">").Append(countStr).Append(item.MenuItemUI.Name).AppendLine("</td>");
                     var itemPriceStr = item.MenuItemUI.Price.HasValue ? (item.MenuItemUI.Price.Value * item.Count).ToRawHtmlCurrencyString(currency) : string.Empty;
-                    itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\">").Append(itemPriceStr).AppendLine("</td>");
 
-                    if (!string.IsNullOrEmpty(item.MenuItemUI.Barcode))
+                    itemsPart.AppendLine("<tr>");
+
+                    itemsPart
+                        .Append("<td cellpadding=\"2px\" valign=\"middle\" style=\"padding-left: 40px;\">")
+                        .Append(countStr)
+                        .Append(item.MenuItemUI.Name)
+                        .AppendLine("</td>");
+
+                    itemsPart
+                        .Append("<td cellpadding=\"2px\" valign=\"middle\">")
+                        .Append(itemPriceStr)
+                        .AppendLine("</td>");
+
+                    if (!string.IsNullOrEmpty(item.MenuItemUI.Barcode) && this.HasBarcode(item.MenuItemUI.Barcode, order, imagesWithNames))
                     {
-                        Stream barcodeStream;
+                        itemsPart
+                            .Append("<td cellpadding=\"2px\" valign=\"middle\"><img style=\"margin-left: 14px;margin-left: 9px;padding-top: 10px; padding-bottom:10px\" src=\"cid:")
+                            .Append(item.MenuItemUI.Barcode)
+                            .AppendLine(".png\"/></td>");
 
-                        if (imagesWithNames.ContainsKey(item.MenuItemUI.Barcode + ".png"))
+                        if (item.Count > 1)
                         {
-                            barcodeStream = imagesWithNames[item.MenuItemUI.Barcode + ".png"];
-                        }
-                        else
-                        {
-                            barcodeStream = GetBase64EAN13Barcode(item.MenuItemUI.Barcode, order);
-                        }
-                        if (barcodeStream != null)
-                        {
-                            if (!imagesWithNames.ContainsKey(item.MenuItemUI.Barcode + ".png"))
-                                imagesWithNames.Add(item.MenuItemUI.Barcode + ".png", barcodeStream);
-
-                            itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\"><img style=\"margin-left: 14px;margin-left: 9px;padding-top: 10px; padding-bottom:10px\" src=\"cid:").Append(item.MenuItemUI.Barcode).AppendLine(".png\"/></td>");
-                            if (item.Count > 1)
-                            {
-                                itemsPart.AppendLine("<td cellpadding=\"2px\" valign=\"middle\" style=\"font-size:40px\">x</td>");
-                                itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\" style=\"font-size:50px\">").Append(item.Count).AppendLine("</td>");
-                            }
+                            itemsPart.AppendLine("<td cellpadding=\"2px\" valign=\"middle\" style=\"font-size:40px\">x</td>");
+                            itemsPart
+                                .Append("<td cellpadding=\"2px\" valign=\"middle\" style=\"font-size:50px\">")
+                                .Append(item.Count)
+                                .AppendLine("</td>");
                         }
                     }
 
@@ -398,86 +385,109 @@ namespace Flipdish.Recruiting.WebhookReceiver
                     foreach (var option in item.MenuItemUI.MenuOptions)
                     {
                         itemsPart.AppendLine("<tr>");
-                        itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\" style=\"padding-left: 40px;padding-top: 10px; padding-bottom:10px\">+ ").Append(option.Name).AppendLine("</td>");
-                        itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\">").Append((option.Price * item.Count).ToRawHtmlCurrencyString(currency)).AppendLine("</td>");
+                        itemsPart
+                            .Append("<td cellpadding=\"2px\" valign=\"middle\" style=\"padding-left: 40px;padding-top: 10px; padding-bottom:10px\">+ ")
+                            .Append(option.Name)
+                            .AppendLine("</td>");
+                        itemsPart
+                            .Append("<td cellpadding=\"2px\" valign=\"middle\">")
+                            .Append((option.Price * item.Count).ToRawHtmlCurrencyString(currency))
+                            .AppendLine("</td>");
 
-                        if (!string.IsNullOrEmpty(option.Barcode))
+                        if (!string.IsNullOrEmpty(option.Barcode) && this.HasBarcode(option.Barcode, order, imagesWithNames))
                         {
-                            Stream barcodeStream;
-
-                            if (imagesWithNames.ContainsKey(option.Barcode + ".png"))
-                            {
-                                barcodeStream = imagesWithNames[option.Barcode + ".png"];
-                            }
-                            else
-                            {
-                                barcodeStream = GetBase64EAN13Barcode(option.Barcode, order);
-                            }
-                            if (barcodeStream != null)
-                            {
-                                if (!imagesWithNames.ContainsKey(option.Barcode + ".png"))
-                                {
-                                    imagesWithNames.Add(option.Barcode + ".png", barcodeStream);
-                                }
-                                itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\"><img style=\"margin-left: 14px;margin-left: 9px;padding-top: 10px; padding-bottom:10px\" src=\"cid:").Append(option.Barcode).AppendLine(".png\"/></td>");
-                            }
+                            itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\"><img style=\"margin-left: 14px;margin-left: 9px;padding-top: 10px; padding-bottom:10px\" src=\"cid:").Append(option.Barcode).AppendLine(".png\"/></td>");
                         }
 
                         itemsPart.AppendLine("</tr>");
                     }
-                }
-
-                if (!section.Equals(last))
-                {
-                    itemsPart.AppendLine(GetSpaceDivider());
                 }
             }
 
             return itemsPart.ToString();
         }
 
-        private Stream GetBase64EAN13Barcode(string barcodeNumbers, Order order)
+        // TODO: Can be optimized by using a sort + single for
+        private List<MenuSectionGrouped> GetMenuSectionGroupedList(List<OrderItem> orderItems, string barcodeMetadataKey)
+        {
+            var groupedOrderItems = orderItems
+                .GroupBy(entry => new { entry.MenuSectionDisplayOrder, entry.MenuSectionName })
+                .ToDictionary(
+                    entry => new { Order = entry.Key.MenuSectionDisplayOrder, Name = entry.Key.MenuSectionName },
+                    entry => entry
+                                .OrderBy(b => b.MenuItemDisplayOrder)
+                                .Select(item => new MenuItemUI(item, barcodeMetadataKey))
+                                .ToList())
+                .OrderBy(key => key.Key.Order);
+
+            return groupedOrderItems
+                .Select((section, order) =>
+                {
+                    var menuItemsGroupedList = new List<MenuItemsGrouped>();
+                    int menuItemDisplayOrder = 0;
+
+                    foreach (var item in section.Value)
+                    {
+                        // TODO: Can be optimized, by doing the same logic on the dictionary construction
+                        var menuItemsGrouped = menuItemsGroupedList.Find(a => a.MenuItemUI.HashCode == item.HashCode);
+
+                        if (menuItemsGrouped == null)
+                        {
+                            menuItemsGrouped = new MenuItemsGrouped
+                            {
+                                MenuItemUI = item,
+                                Count = 1,
+                                DisplayOrder = menuItemDisplayOrder++
+                            };
+
+                            menuItemsGroupedList.Add(menuItemsGrouped);
+                            continue;
+                        }
+
+                        menuItemsGrouped.Count++;
+                    }
+
+                    return new MenuSectionGrouped
+                    {
+                        Name = section.Key.Name,
+                        DisplayOrder = order,
+                        MenuItemsGroupedList = menuItemsGroupedList
+                    };
+                })
+                .ToList();
+        }
+
+        private bool HasBarcode(string barcodeIdentifier, Order order, Dictionary<string, Stream> imagesWithNames)
+        {
+            if (imagesWithNames.ContainsKey(barcodeIdentifier + ".png"))
+            {
+                return true;
+            }
+
+            if (GetBase64EAN13Barcode(barcodeIdentifier, order, out var barcodeStream))
+            {
+                imagesWithNames.Add(barcodeIdentifier + ".png", barcodeStream);
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool GetBase64EAN13Barcode(string barcodeNumbers, Order order, out Stream barcodeStream)
         {
             try
             {
-                var barcode = new Barcode(barcodeNumbers, showLabel: true, width: 130, height: 110, labelPosition: LabelPosition.BottomCenter);
-
-                var bytes = barcode.GetByteArray();
-                return new MemoryStream(bytes);
+                var barcode = new Barcode(barcodeNumbers, true, 130, 110, LabelPosition.BottomCenter);
+                barcodeStream = new MemoryStream(barcode.GetByteArray());
+                return true;
             }
             catch (Exception ex)
             {
-                _log.LogError(ex, $"{barcodeNumbers} is not a valid barcode for order #{order.OrderId}");
-                return null;
+                _log.LogError(ex, "{barcodeNumbers} is not a valid barcode for order #{OrderId}", barcodeNumbers, order.OrderId);
             }
-        }
 
-        private string GetLineDivider()
-        {
-            var result = new StringBuilder();
-
-            result.AppendLine("<tr>");
-            result.AppendLine("<td colspan=\"2\" align =\"center\" valign=\"top\">");
-            result.AppendLine("<table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" align=\"center\" style=\"height: 1px; background-color: rgb(186, 186, 186);\">");
-            result.AppendLine("</table>");
-            result.AppendLine("</td>");
-            result.AppendLine("</tr>");
-
-            return result.ToString();
-        }
-
-        private string GetSpaceDivider()
-        {
-            var result = new StringBuilder();
-
-            result.AppendLine("<tr>");
-            result.AppendLine("<td colspan=\"2\" align =\"center\" valign=\"top\">");
-            result.AppendLine("<table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" align=\"center\" style=\"height: 22px;\">");
-            result.AppendLine("</table>");
-            result.AppendLine("</td>");
-            result.AppendLine("</tr>");
-
-            return result.ToString();
+            barcodeStream = null;
+            return false;
         }
     }
 }
