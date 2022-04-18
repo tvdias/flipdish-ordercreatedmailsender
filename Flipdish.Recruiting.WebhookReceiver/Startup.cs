@@ -21,9 +21,20 @@ namespace Flipdish.Recruiting.WebhookReceiver
     {
         public override void Configure(IFunctionsHostBuilder builder)
         {
-            var logger = new LoggerConfiguration()
-                .WriteTo.Console()
-                .CreateLogger();
+            var useSeq = builder.GetContext().Configuration.GetValue<bool>("AppSettings:UseSeq");
+
+            var loggerConfig = new LoggerConfiguration();
+
+            if (useSeq)
+            {
+                loggerConfig = loggerConfig.WriteTo.Seq("http://localhost:5341");
+            }
+            else
+            {
+                loggerConfig = loggerConfig.WriteTo.Console();
+            }
+
+            var logger = loggerConfig.CreateLogger();
 
             builder.Services
                 .AddLogging(lb => lb.AddSerilog(logger))

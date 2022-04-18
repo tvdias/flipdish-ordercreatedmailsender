@@ -7,3 +7,16 @@ services:
     ports:
       - "1025:1025"
       - "1080:1080"
+
+  seq:
+    image: datalust/seq:2021.4
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+      - "5341:5341"
+    environment:
+      ACCEPT_EULA: "Y"
+      # pass = admin
+      SEQ_FIRSTRUN_ADMINPASSWORDHASH: FMkV3nF5EvdjIe4vd6EezbVGq96KBVyTsu62CSKEs9rEnemlkg==
+    volumes:
+      - ./docker/seq:/data
