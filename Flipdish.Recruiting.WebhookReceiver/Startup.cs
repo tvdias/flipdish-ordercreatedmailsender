@@ -41,7 +41,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
             builder.Services
                 .AddSingleton<EmailRendererService>()
                 .AddTransient<EmailService>()
-                .AddSingleton<MapService>();
+                .AddSingleton<IMapService, MapService>();
         }
 
         public override void ConfigureAppConfiguration(IFunctionsConfigurationBuilder builder)

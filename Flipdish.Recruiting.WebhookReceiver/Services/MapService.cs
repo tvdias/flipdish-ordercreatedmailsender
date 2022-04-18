@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace Flipdish.Recruiting.WebhookReceiver.Services
 {
-    public class MapService
+    public class MapService : IMapService
     {
         private readonly AppSettings _appSettings;
 

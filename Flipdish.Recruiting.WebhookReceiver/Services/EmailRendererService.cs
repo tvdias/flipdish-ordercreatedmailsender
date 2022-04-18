@@ -3,29 +3,31 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using DotLiquid;
 using Flipdish.Recruiting.WebhookReceiver.Config;
 using Flipdish.Recruiting.WebhookReceiver.Helpers;
 using Flipdish.Recruiting.WebhookReceiver.Models;
-using Flipdish.Recruiting.WebhookReceiver.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NetBarcode;
 
-namespace Flipdish.Recruiting.WebhookReceiver
+[assembly: InternalsVisibleTo("Flipdish.Recruiting.WebhookReceiverTests")]
+
+namespace Flipdish.Recruiting.WebhookReceiver.Services
 {
     public class EmailRendererService
     {
         private readonly ILogger _log;
         private readonly AppSettings _appSettings;
-        private readonly MapService _mapService;
+        private readonly IMapService _mapService;
 
         private const string SPACE_DIVIDER = "<tr><td colspan=\"2\" align =\"center\" valign=\"top\"><table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" align=\"center\" style=\"height: 22px;\"></table></td></tr>";
         private const string LINE_DIVIDER = "<tr><td colspan=\"2\" align =\"center\" valign=\"top\"><table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" align=\"center\" style=\"height: 1px; background-color: rgb(186, 186, 186);\"></table></td></tr>";
 
-        public EmailRendererService(ILogger<EmailRendererService> log, IOptions<AppSettings> appSettings, MapService mapService)
+        public EmailRendererService(ILogger<EmailRendererService> log, IOptions<AppSettings> appSettings, IMapService mapService)
         {
             _log = log;
             _appSettings = appSettings.Value;
@@ -283,15 +285,6 @@ namespace Flipdish.Recruiting.WebhookReceiver
             return template.Render(paramaters);
         }
 
-        private string GetCustomerPickupLocationMessage(Order order)
-        {
-            if (!order.DropOffLocationId.HasValue || order.PickupLocationType != Order.PickupLocationTypeEnum.TableService)
-                return null;
-
-            var tableServiceCategoryMessage = order.TableServiceCatagory.Value.GetTableServiceCategoryLabel();
-            return $"{tableServiceCategoryMessage}: {order.DropOffLocation}";
-        }
-
         private string GetCustomerDetailsPartial(Order order)
         {
             var template = GetLiquidTemplate("CustomerDetailsPartial.liquid");
@@ -321,12 +314,6 @@ namespace Flipdish.Recruiting.WebhookReceiver
             };
 
             return template.Render(paramaters);
-        }
-
-        private Template GetLiquidTemplate(string fileName)
-        {
-            var templateFilePath = Path.Combine("./LiquidTemplates", fileName);
-            return Template.Parse(new StreamReader(templateFilePath).ReadToEnd());
         }
 
         private string GetItemsPart(Order order, string barcodeMetadataKey, Currency currency, Dictionary<string, Stream> imagesWithNames)
@@ -363,7 +350,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
                         .Append(itemPriceStr)
                         .AppendLine("</td>");
 
-                    if (!string.IsNullOrEmpty(item.MenuItemUI.Barcode) && this.HasBarcode(item.MenuItemUI.Barcode, order, imagesWithNames))
+                    if (!string.IsNullOrEmpty(item.MenuItemUI.Barcode) && HasBarcode(item.MenuItemUI.Barcode, order, imagesWithNames))
                     {
                         itemsPart
                             .Append("<td cellpadding=\"2px\" valign=\"middle\"><img style=\"margin-left: 14px;margin-left: 9px;padding-top: 10px; padding-bottom:10px\" src=\"cid:")
@@ -394,7 +381,7 @@ namespace Flipdish.Recruiting.WebhookReceiver
                             .Append((option.Price * item.Count).ToRawHtmlCurrencyString(currency))
                             .AppendLine("</td>");
 
-                        if (!string.IsNullOrEmpty(option.Barcode) && this.HasBarcode(option.Barcode, order, imagesWithNames))
+                        if (!string.IsNullOrEmpty(option.Barcode) && HasBarcode(option.Barcode, order, imagesWithNames))
                         {
                             itemsPart.Append("<td cellpadding=\"2px\" valign=\"middle\"><img style=\"margin-left: 14px;margin-left: 9px;padding-top: 10px; padding-bottom:10px\" src=\"cid:").Append(option.Barcode).AppendLine(".png\"/></td>");
                         }
@@ -405,56 +392,6 @@ namespace Flipdish.Recruiting.WebhookReceiver
             }
 
             return itemsPart.ToString();
-        }
-
-        // TODO: Can be optimized by using a sort + single for
-        private List<MenuSectionGrouped> GetMenuSectionGroupedList(List<OrderItem> orderItems, string barcodeMetadataKey)
-        {
-            var groupedOrderItems = orderItems
-                .GroupBy(entry => new { entry.MenuSectionDisplayOrder, entry.MenuSectionName })
-                .ToDictionary(
-                    entry => new { Order = entry.Key.MenuSectionDisplayOrder, Name = entry.Key.MenuSectionName },
-                    entry => entry
-                                .OrderBy(b => b.MenuItemDisplayOrder)
-                                .Select(item => new MenuItemUI(item, barcodeMetadataKey))
-                                .ToList())
-                .OrderBy(key => key.Key.Order);
-
-            return groupedOrderItems
-                .Select((section, order) =>
-                {
-                    var menuItemsGroupedList = new List<MenuItemsGrouped>();
-                    int menuItemDisplayOrder = 0;
-
-                    foreach (var item in section.Value)
-                    {
-                        // TODO: Can be optimized, by doing the same logic on the dictionary construction
-                        var menuItemsGrouped = menuItemsGroupedList.Find(a => a.MenuItemUI.HashCode == item.HashCode);
-
-                        if (menuItemsGrouped == null)
-                        {
-                            menuItemsGrouped = new MenuItemsGrouped
-                            {
-                                MenuItemUI = item,
-                                Count = 1,
-                                DisplayOrder = menuItemDisplayOrder++
-                            };
-
-                            menuItemsGroupedList.Add(menuItemsGrouped);
-                            continue;
-                        }
-
-                        menuItemsGrouped.Count++;
-                    }
-
-                    return new MenuSectionGrouped
-                    {
-                        Name = section.Key.Name,
-                        DisplayOrder = order,
-                        MenuItemsGroupedList = menuItemsGroupedList
-                    };
-                })
-                .ToList();
         }
 
         private bool HasBarcode(string barcodeIdentifier, Order order, Dictionary<string, Stream> imagesWithNames)
@@ -488,6 +425,83 @@ namespace Flipdish.Recruiting.WebhookReceiver
 
             barcodeStream = null;
             return false;
+        }
+
+        private static string GetCustomerPickupLocationMessage(Order order)
+        {
+            if (!order.DropOffLocationId.HasValue || order.PickupLocationType != Order.PickupLocationTypeEnum.TableService)
+            {
+                return null;
+            }
+
+            var tableServiceCategoryMessage = order.TableServiceCatagory.Value.GetTableServiceCategoryLabel();
+            return $"{tableServiceCategoryMessage}: {order.DropOffLocation}";
+        }
+
+        private static Template GetLiquidTemplate(string fileName)
+        {
+            var templateFilePath = Path.Combine("./LiquidTemplates", fileName);
+            return Template.Parse(new StreamReader(templateFilePath).ReadToEnd());
+        }
+
+        public static List<MenuSectionGrouped> GetMenuSectionGroupedList(List<OrderItem> orderItems, string barcodeMetadataKey)
+        {
+            var result = new List<MenuSectionGrouped>();
+
+            var sortedOrderItems = orderItems
+                .OrderBy(a => a.MenuSectionDisplayOrder)
+                .ThenBy(a => a.MenuSectionName)
+                .ThenBy(a => a.MenuItemDisplayOrder)
+                .ThenBy(a => a.Name) // assuming using order + name is safe enought for sorting
+                .ToList();
+
+            var currentMenuItemDisplayOrder = int.MinValue; // assuming no entry will ever use it
+            var menuItemDisplayOrder = 0;
+            var currentSectionDisplayOrder = 0;
+            MenuSectionGrouped currentSection = null;
+            MenuItemsGrouped menuItemsGrouped = null;
+
+            foreach (var item in sortedOrderItems)
+            {
+                // if it's a different section, let's initialize it!
+                if (item.MenuSectionName != currentSection?.Name)
+                {
+                    currentMenuItemDisplayOrder = int.MinValue;
+                    menuItemDisplayOrder = 0;
+
+                    currentSection = new MenuSectionGrouped
+                    {
+                        Name = item.MenuSectionName,
+                        DisplayOrder = currentSectionDisplayOrder++,
+                        MenuItemsGroupedList = new List<MenuItemsGrouped>()
+                    };
+
+                    result.Add(currentSection);
+                }
+
+                // if it's a different currentMenuItemDisplayOrder then it's a different item
+                if (item.MenuItemDisplayOrder != currentMenuItemDisplayOrder
+                    // when having the same currentMenuItemDisplayOrder, item name is used for double check
+                    || (item.Name != menuItemsGrouped.MenuItemUI.Name)
+                    // and item hashcode as last resort (probably not needed)
+                    || (new MenuItemUI(item, barcodeMetadataKey).GetHashCode() != menuItemsGrouped.MenuItemUI.GetHashCode()))
+                {
+                    menuItemsGrouped = new MenuItemsGrouped
+                    {
+                        MenuItemUI = new MenuItemUI(item, barcodeMetadataKey),
+                        Count = 1,
+                        DisplayOrder = menuItemDisplayOrder++
+                    };
+
+                    currentSection.MenuItemsGroupedList.Add(menuItemsGrouped);
+                }
+                else
+                {
+                    menuItemsGrouped.Count++;
+                }
+            }
+
+            return result;
         }
     }
 }
