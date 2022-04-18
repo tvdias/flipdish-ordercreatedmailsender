@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 
@@ -13,10 +12,7 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
         {
             get
             {
-                var newDictionary = SymbolsByCode.ToDictionary(entry => entry.Key,
-                                                entry => entry.Value);
-
-                return newDictionary;
+                return SymbolsByCode.ToDictionary(entry => entry.Key, entry => entry.Value);
             }
         }
 
@@ -27,24 +23,17 @@ namespace Flipdish.Recruiting.WebhookReceiver.Helpers
 
         static CurrencyCodeMapper()
         {
-            try
-            {
-                SymbolsByCode = new Dictionary<string, string>();
-                IEnumerable<RegionInfo> regions = CultureInfo.GetCultures(CultureTypes.SpecificCultures)
-                    .Select(x => new RegionInfo(x.Name))
-                    .ToList();
+            SymbolsByCode = new Dictionary<string, string>();
+            var regions = CultureInfo.GetCultures(CultureTypes.SpecificCultures)
+                .Select(x => new RegionInfo(x.Name))
+                .ToList();
 
-                foreach (RegionInfo region in regions)
-                {
-                    if (!SymbolsByCode.ContainsKey(region.ISOCurrencySymbol.ToUpper()))
-                    {
-                        SymbolsByCode.Add(region.ISOCurrencySymbol.ToUpper(), region.CurrencySymbol);
-                    }
-                }
-            }
-            catch (Exception ex)
+            foreach (var region in regions)
             {
-                throw;
+                if (!SymbolsByCode.ContainsKey(region.ISOCurrencySymbol.ToUpper()))
+                {
+                    SymbolsByCode.Add(region.ISOCurrencySymbol.ToUpper(), region.CurrencySymbol);
+                }
             }
         }
     }

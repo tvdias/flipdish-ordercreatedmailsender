@@ -103,7 +103,7 @@
             },
             {
               "Metadata": {
-                "Barcode": "978020137962"
+                "eancode": "978020137962"
               },
               "MenuItemOptionPublicId": "ebfe0d4c-65f7-41fa-91cc-0d1b25393f7e",
               "MenuItemOptionId": 25077135,
@@ -115,7 +115,7 @@
             }
           ],
           "Metadata": {
-            "Barcode": "978020137962"
+            "eancode": "978020137962"
           },
           "MenuItemPublicId": "f16caf40-c744-4534-9ebd-634c4ec50832",
           "MenuSectionName": "TACOS",

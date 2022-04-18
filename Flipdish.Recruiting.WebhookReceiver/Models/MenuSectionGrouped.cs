@@ -28,6 +28,11 @@ namespace Flipdish.Recruiting.WebhookReceiver.Models
 
         private readonly string _barcodeMetadataKey;
 
+        [Newtonsoft.Json.JsonConstructor]
+        private MenuItemUI()
+        {
+        }
+
         public MenuItemUI(OrderItem OrderItem, string barcodeMetadataKey)
         {
             _barcodeMetadataKey = barcodeMetadataKey;
